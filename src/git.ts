@@ -1,4 +1,4 @@
-import {assert, check} from '@augment-vir/assert';
+import {assert, assertWrap, check} from '@augment-vir/assert';
 import {extractErrorMessage, log, logColors} from '@augment-vir/common';
 import {askQuestion} from '@augment-vir/node';
 import {type DefaultLogFields, type ListLogLine, type SimpleGit} from 'simple-git';
@@ -61,6 +61,25 @@ export type DeployCommits = {
     deployedCommits: ReadonlyArray<Readonly<Commit>>;
     overwrittenCommits: ReadonlyArray<Readonly<Commit>>;
 };
+/**
+ * Before/after of the branch deployed to.
+ *
+ * @category Internal
+ */
+export type DeployBranchStatus = {
+    before: Readonly<Commit>;
+    after: Readonly<Commit>;
+};
+
+/**
+ * Output from {@link pushDeploy}.
+ *
+ * @category Internal
+ */
+export type DeployResult = {
+    deployCommits: DeployCommits;
+    branchStatus: DeployBranchStatus;
+};
 
 /**
  * Push the deploy via git.
@@ -71,7 +90,7 @@ export async function pushDeploy(
     git: Readonly<SimpleGit>,
     {deployName, fromBranch, toBranch}: Readonly<DeployVirBranchConfig>,
     remoteName: string,
-): Promise<DeployCommits> {
+): Promise<DeployResult> {
     assert.isTruthy(fromBranch, `Deploy '${deployName}' fromBranch cannot be empty.`);
     assert.isTruthy(toBranch, `Deploy '${deployName}' toBranch cannot be empty.`);
     assert.isTruthy(remoteName, 'Remote name cannot be empty.');
@@ -79,8 +98,30 @@ export async function pushDeploy(
     log.faint(`Pushing ${remoteName}/${fromBranch} to ${toBranch}`);
 
     await git.fetch(remoteName, fromBranch);
+    await git.fetch(remoteName, toBranch);
 
     const pushString = `${remoteName}/${fromBranch}:${toBranch}`;
+
+    // Get the current commit on the target branch before pushing
+    const beforeCommit = assertWrap.isDefined(
+        (
+            await git.log([
+                `${remoteName}/${toBranch}`,
+                '-1',
+            ])
+        ).latest,
+        `Failed to get current commit for ${remoteName}/${toBranch}`,
+    );
+
+    const afterCommit = assertWrap.isDefined(
+        (
+            await git.log([
+                `${remoteName}/${fromBranch}`,
+                '-1',
+            ])
+        ).latest,
+        `Failed to get current commit for ${remoteName}/${fromBranch}`,
+    );
 
     /** Get commits that are on {@link toBranch} but not on {@link fromBranch}. */
     const commitsAhead = (
@@ -98,8 +139,14 @@ export async function pushDeploy(
         await git.push(remoteName, pushString);
 
         return {
-            deployedCommits: commitsAhead,
-            overwrittenCommits: [],
+            deployCommits: {
+                deployedCommits: commitsAhead,
+                overwrittenCommits: [],
+            },
+            branchStatus: {
+                before: beforeCommit,
+                after: afterCommit,
+            },
         };
     } catch (error) {
         log.error(`Push failed: ${extractErrorMessage(error)}`);
@@ -135,8 +182,14 @@ export async function pushDeploy(
         }
 
         return {
-            deployedCommits: commitsAhead,
-            overwrittenCommits: commitsBehind.all,
+            deployCommits: {
+                deployedCommits: commitsAhead,
+                overwrittenCommits: commitsBehind.all,
+            },
+            branchStatus: {
+                before: beforeCommit,
+                after: afterCommit,
+            },
         };
     }
 }

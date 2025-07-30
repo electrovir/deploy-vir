@@ -1,5 +1,6 @@
 import {assertWrap} from '@augment-vir/assert';
 import {extractErrorMessage, log} from '@augment-vir/common';
+import {resolve} from 'node:path';
 import simpleGit from 'simple-git';
 import {type DeployVirConfig} from '../config.js';
 import {getGitRemoteName, pushDeploy} from '../git.js';
@@ -16,7 +17,7 @@ export async function runDeployVirCli(args: ReadonlyArray<string>, cwd = process
     const repoName = assertWrap.isTruthy(args[1], 'Missing repo name.');
     const deployName = assertWrap.isTruthy(args[2], 'Missing deploy name.');
 
-    const config = (await import(configPath)).default;
+    const config = (await import(resolve(cwd, configPath))).default;
 
     await runDeployVir({cwd, deployName, repoName}, config);
 }
@@ -61,12 +62,12 @@ export async function runDeployVir(
         const remoteName = await getGitRemoteName(git, repoConfig);
         log.faint(`Remote: ${remoteName}`);
 
-        const deployCommits = await pushDeploy(git, branchConfig, remoteName);
+        const deployResult = await pushDeploy(git, branchConfig, remoteName);
 
         if (config.notifications?.length) {
             await sendNotifications(config.notifications, {
                 branchConfig,
-                deployCommits,
+                deployResult,
                 repoConfig,
             });
         }

@@ -10,16 +10,14 @@ import {sendNotificationToSlack} from './slack.js';
  */
 export async function sendNotifications(
     notifications: ReadonlyArray<Readonly<NotificationConfig>>,
-    {branchConfig, deployCommits, repoConfig}: Readonly<Omit<NotificationParams, 'notification'>>,
+    params: Readonly<Omit<NotificationParams, 'notification'>>,
 ) {
     await Promise.all(
         notifications.map(async (notification) => {
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             if (notification.target === NotificationTarget.Slack) {
                 await sendNotificationToSlack({
-                    deployCommits,
-                    branchConfig,
-                    repoConfig,
+                    ...params,
                     notification,
                 });
             } else {

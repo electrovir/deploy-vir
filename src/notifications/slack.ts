@@ -1,4 +1,4 @@
-import {addPrefix} from '@augment-vir/common';
+import {addPrefix, capitalizeFirstLetter} from '@augment-vir/common';
 import {type ChatPostMessageArguments} from '@slack/web-api';
 import {joinUrlPaths} from 'url-vir';
 import {type SlackNotificationConfig} from '../config.js';
@@ -32,7 +32,10 @@ function formatCommit(baseCommitUrl: string | undefined, commit: Readonly<Commit
  */
 export async function sendNotificationToSlack({
     branchConfig,
-    deployCommits: {deployedCommits, overwrittenCommits},
+    deployResult: {
+        deployCommits: {deployedCommits, overwrittenCommits},
+        branchStatus: {after, before},
+    },
     notification,
     repoConfig,
 }: Readonly<NotificationParams>) {
@@ -51,12 +54,26 @@ export async function sendNotificationToSlack({
         ? overwrittenCommitBullets.map((bullet) => `- ${bullet}`).join('\n')
         : undefined;
 
+    const beforeText = repoConfig.commitBaseUrl
+        ? `<${joinUrlPaths(repoConfig.commitBaseUrl, before.hash)}|${before.hash.slice(0, 7)}>`
+        : before.hash;
+    const afterText = repoConfig.commitBaseUrl
+        ? `<${joinUrlPaths(repoConfig.commitBaseUrl, after.hash)}|${after.hash.slice(0, 7)}>`
+        : before.hash;
+
     const blocks: any[] = [
         {
             type: 'section',
             text: {
                 type: 'mrkdwn',
-                text: `*${branchConfig.deployName}* Deployed`,
+                text: `*${capitalizeFirstLetter(branchConfig.deployName)}* Pushed`,
+            },
+        },
+        {
+            type: 'context',
+            text: {
+                type: 'mrkdwn',
+                text: `${beforeText} -> ${afterText}`,
             },
         },
         {
