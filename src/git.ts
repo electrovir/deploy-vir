@@ -125,10 +125,9 @@ export async function pushDeploy(
 
     /** Get commits that are on {@link toBranch} but not on {@link fromBranch}. */
     const commitsAhead = (
-        await git.log({
-            from: `${remoteName}/${toBranch}`,
-            to: `${remoteName}/${fromBranch}`,
-        })
+        await git.log([
+            '${remoteName}/${toBranch}..${remoteName}/${fromBranch}',
+        ])
     ).all;
 
     if (!commitsAhead.length) {
@@ -152,16 +151,17 @@ export async function pushDeploy(
         log.error(`Push failed: ${extractErrorMessage(error)}`);
 
         /** Get commits that are on {@link toBranch} but not on {@link fromBranch}. */
-        const commitsBehind = await git.log({
-            from: `${remoteName}/${fromBranch}`,
-            to: `${remoteName}/${toBranch}`,
-        });
+        const commitsBehind = (
+            await git.log([
+                '${remoteName}/${fromBranch}..${remoteName}/${toBranch}',
+            ])
+        ).all;
 
-        if (commitsBehind.total > 0) {
+        if (commitsBehind.length > 0) {
             log.info(
-                `\nThe following ${commitsBehind.total} commit${commitsBehind.total === 1 ? '' : 's'} are on ${logColors.bold}${toBranch}${logColors.reset} but not on ${logColors.bold}${fromBranch}${logColors.reset}:`,
+                `\nThe following ${commitsBehind.length} commit${commitsBehind.length === 1 ? '' : 's'} are on ${logColors.bold}${toBranch}${logColors.reset} but not on ${logColors.bold}${fromBranch}${logColors.reset}:`,
             );
-            commitsBehind.all.forEach((commit, index) => {
+            commitsBehind.forEach((commit, index) => {
                 log.faint(
                     `    ${index + 1}. ${commit.hash.slice(0, 7)} (${commit.author_name}) - ${commit.message}`,
                 );
@@ -184,7 +184,7 @@ export async function pushDeploy(
         return {
             deployCommits: {
                 deployedCommits: commitsAhead,
-                overwrittenCommits: commitsBehind.all,
+                overwrittenCommits: commitsBehind,
             },
             branchStatus: {
                 before: beforeCommit,
