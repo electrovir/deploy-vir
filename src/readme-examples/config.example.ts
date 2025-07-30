@@ -5,7 +5,7 @@ export default defineDeployVirConfig({
         {
             /** This does not need to match the actual repo name. */
             name: 'whatever',
-            girUrl: 'git@github.com:electrovir/deploy-vir.git',
+            gitUrl: 'git@github.com:electrovir/deploy-vir.git',
             deploys: [
                 {
                     deployName: 'staging',

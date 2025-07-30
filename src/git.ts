@@ -12,16 +12,16 @@ import {KnownError} from './known.error.js';
  */
 export async function getGitRemoteName(
     git: Readonly<SimpleGit>,
-    repoConfig: Readonly<Pick<DeployVirRepoConfig, 'name' | 'girUrl'>>,
+    repoConfig: Readonly<Pick<DeployVirRepoConfig, 'name' | 'gitUrl'>>,
 ): Promise<string> {
     assert.isTruthy(repoConfig.name, 'Repo config name cannot be empty.');
-    assert.isTruthy(repoConfig.girUrl, 'Repo git URL cannot be empty.');
+    assert.isTruthy(repoConfig.gitUrl, 'Repo git URL cannot be empty.');
 
     const remotes = await git.getRemotes(true);
 
     const remoteMatchByUrl = remotes.find(
         (remote) =>
-            remote.refs.fetch === repoConfig.girUrl || remote.refs.push === repoConfig.girUrl,
+            remote.refs.fetch === repoConfig.gitUrl || remote.refs.push === repoConfig.gitUrl,
     );
 
     if (remoteMatchByUrl) {
@@ -40,7 +40,7 @@ export async function getGitRemoteName(
         .filter(check.isTruthy)
         .join('-');
 
-    await git.addRemote(newRemoteName, repoConfig.girUrl);
+    await git.addRemote(newRemoteName, repoConfig.gitUrl);
 
     return newRemoteName;
 }

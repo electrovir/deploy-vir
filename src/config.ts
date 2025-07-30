@@ -76,7 +76,7 @@ export type DeployVirRepoConfig = {
      * - 'git@github.com:electrovir/deploy-vir.git'
      * - 'https://github.com/electrovir/deploy-vir.git'
      */
-    girUrl: string;
+    gitUrl: string;
     /**
      * A url to the base commit path for links. The commit hash will be appended to this for links
      * in notifications. If this is omitted, there simply won't be any links.
