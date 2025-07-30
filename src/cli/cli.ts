@@ -59,6 +59,7 @@ export async function runDeployVir(
             ),
         );
         const remoteName = await getGitRemoteName(git, repoConfig);
+        log.faint(`Remote: ${remoteName}`);
 
         const deployCommits = await pushDeploy(git, branchConfig, remoteName);
 

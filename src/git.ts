@@ -76,6 +76,8 @@ export async function pushDeploy(
     assert.isTruthy(toBranch, `Deploy '${deployName}' toBranch cannot be empty.`);
     assert.isTruthy(remoteName, 'Remote name cannot be empty.');
 
+    log.faint(`Pushing ${remoteName}/${fromBranch} to ${toBranch}`);
+
     await git.fetch(remoteName, fromBranch);
 
     const pushString = `${remoteName}/${fromBranch}:${toBranch}`;
