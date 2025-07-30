@@ -44,11 +44,11 @@ export async function sendNotificationToSlack({
     );
 
     const deployedCommitBulletsText = deployedCommitBullets
-        .map((bullet) => `• ${bullet}`)
+        .map((bullet) => `- ${bullet}`)
         .join('\n');
 
     const overwrittenCommitBulletsText = overwrittenCommitBullets.length
-        ? overwrittenCommitBullets.map((bullet) => `• ${bullet}`).join('\n')
+        ? overwrittenCommitBullets.map((bullet) => `- ${bullet}`).join('\n')
         : undefined;
 
     const blocks: any[] = [
