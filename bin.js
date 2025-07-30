@@ -3,6 +3,6 @@
 import {runCliScript} from '@augment-vir/node/dist/index.js';
 import {join} from 'node:path';
 
-const cliPath = join(import.meta.dirname, 'src', 'cli.script.ts');
+const cliPath = join(import.meta.dirname, 'src', 'cli', 'cli.script.ts');
 
 await runCliScript(cliPath, import.meta.filename, 'deploy-vir');
