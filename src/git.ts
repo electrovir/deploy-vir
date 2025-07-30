@@ -158,14 +158,14 @@ export async function pushDeploy(
         ).all;
 
         if (commitsBehind.length > 0) {
-            log.info(`\nOnn ${logColors.bold}${fromBranch}${logColors.reset}:`);
-            commitsBehind.forEach((commit, index) => {
+            log.info(`\nOnly on ${logColors.bold}${fromBranch}${logColors.reset}:`);
+            commitsAhead.forEach((commit, index) => {
                 log.faint(
                     `    ${index + 1}. ${commit.hash.slice(0, 7)} (${commit.author_name}) - ${commit.message}`,
                 );
             });
 
-            log.info(`\nOnn ${logColors.bold}${toBranch}${logColors.reset}:`);
+            log.info(`\nOnly on ${logColors.bold}${toBranch}${logColors.reset}:`);
             commitsBehind.forEach((commit, index) => {
                 log.faint(
                     `    ${index + 1}. ${commit.hash.slice(0, 7)} (${commit.author_name}) - ${commit.message}`,
@@ -174,7 +174,7 @@ export async function pushDeploy(
         }
 
         const shouldForcePush = await askQuestion(
-            `\nDo you want to force push ${logColors.bold}${fromBranch}${logColors.reset} to ${logColors.bold}${toBranch}${logColors.reset}?\n\n${logColors.warning}This will overwrite the commits listed above.${logColors.reset} (y/N): `,
+            `\nDo you want to force push ${logColors.bold}${fromBranch}${logColors.reset} to ${logColors.bold}${toBranch}${logColors.reset}?\n\n${logColors.warning}This will overwrite the commits only on ${logColors.bold}${toBranch}${logColors.reset}.${logColors.reset} (y/N): `,
         );
 
         if (shouldForcePush.toLowerCase() === 'y' || shouldForcePush.toLowerCase() === 'yes') {

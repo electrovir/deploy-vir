@@ -1,6 +1,6 @@
 {
     "name": "deploy-vir",
-    "version": "0.2.2",
+    "version": "0.2.3",
     "description": "Deploy a branch to another branch with notifications.",
     "keywords": [
         "deploy",
