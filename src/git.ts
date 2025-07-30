@@ -126,7 +126,7 @@ export async function pushDeploy(
     /** Get commits that are on {@link toBranch} but not on {@link fromBranch}. */
     const commitsAhead = (
         await git.log([
-            '${remoteName}/${toBranch}..${remoteName}/${fromBranch}',
+            `${remoteName}/${toBranch}..${remoteName}/${fromBranch}`,
         ])
     ).all;
 
@@ -153,14 +153,19 @@ export async function pushDeploy(
         /** Get commits that are on {@link toBranch} but not on {@link fromBranch}. */
         const commitsBehind = (
             await git.log([
-                '${remoteName}/${fromBranch}..${remoteName}/${toBranch}',
+                `${remoteName}/${fromBranch}..${remoteName}/${toBranch}`,
             ])
         ).all;
 
         if (commitsBehind.length > 0) {
-            log.info(
-                `\nThe following ${commitsBehind.length} commit${commitsBehind.length === 1 ? '' : 's'} are on ${logColors.bold}${toBranch}${logColors.reset} but not on ${logColors.bold}${fromBranch}${logColors.reset}:`,
-            );
+            log.info(`\nOnn ${logColors.bold}${fromBranch}${logColors.reset}:`);
+            commitsBehind.forEach((commit, index) => {
+                log.faint(
+                    `    ${index + 1}. ${commit.hash.slice(0, 7)} (${commit.author_name}) - ${commit.message}`,
+                );
+            });
+
+            log.info(`\nOnn ${logColors.bold}${toBranch}${logColors.reset}:`);
             commitsBehind.forEach((commit, index) => {
                 log.faint(
                     `    ${index + 1}. ${commit.hash.slice(0, 7)} (${commit.author_name}) - ${commit.message}`,
