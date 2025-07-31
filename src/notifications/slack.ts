@@ -73,7 +73,7 @@ export async function sendNotificationToSlack({
             type: 'context',
             text: {
                 type: 'mrkdwn',
-                text: `${beforeText} -> ${afterText}`,
+                text: `${beforeText} :arrow_right: ${afterText}`,
             },
         },
         {
