@@ -1,5 +1,5 @@
 import {addPrefix, capitalizeFirstLetter} from '@augment-vir/common';
-import {type ChatPostMessageArguments} from '@slack/web-api';
+import {type ChatPostMessageArguments, type KnownBlock} from '@slack/web-api';
 import {joinUrlPaths} from 'url-vir';
 import {type SlackNotificationConfig} from '../config.js';
 import {type Commit} from '../git.js';
@@ -61,7 +61,19 @@ export async function sendNotificationToSlack({
         ? `<${joinUrlPaths(repoConfig.commitBaseUrl, after.hash)}|${after.hash.slice(0, 7)}>`
         : before.hash;
 
-    const blocks: any[] = [
+    const overwrittenCommitBlocks: KnownBlock[] = overwrittenCommitBulletsText
+        ? [
+              {
+                  type: 'section',
+                  text: {
+                      type: 'mrkdwn',
+                      text: `\n*Overwritten Commits*\n${overwrittenCommitBulletsText}`,
+                  },
+              },
+          ]
+        : [];
+
+    const blocks: KnownBlock[] = [
         {
             type: 'section',
             text: {
@@ -71,10 +83,12 @@ export async function sendNotificationToSlack({
         },
         {
             type: 'context',
-            text: {
-                type: 'mrkdwn',
-                text: `${beforeText} :arrow_right: ${afterText}`,
-            },
+            elements: [
+                {
+                    type: 'mrkdwn',
+                    text: `${beforeText} :arrow_right: ${afterText}`,
+                },
+            ],
         },
         {
             type: 'section',
@@ -83,17 +97,7 @@ export async function sendNotificationToSlack({
                 text: `\n*Deployed Commits*\n${deployedCommitBulletsText}`,
             },
         },
-        ...(overwrittenCommitBulletsText
-            ? [
-                  {
-                      type: 'section',
-                      text: {
-                          type: 'mrkdwn',
-                          text: `\n*Overwritten Commits*\n${overwrittenCommitBulletsText}`,
-                      },
-                  },
-              ]
-            : []),
+        ...overwrittenCommitBlocks,
     ];
 
     await sendSlackMessage(notification, {
