@@ -16,12 +16,10 @@ function truncateString(value: string, truncateAt = 100): string {
 }
 
 function formatCommit(baseCommitUrl: string | undefined, commit: Readonly<Commit>) {
-    const commitLine = `${commit.hash.slice(0, 7)} (${commit.author_name}) - ${truncateString(commit.message)}`;
-
     if (baseCommitUrl) {
-        return `<${joinUrlPaths(baseCommitUrl, commit.hash)}|${commitLine}>`;
+        return `<${joinUrlPaths(baseCommitUrl, commit.hash)}|${commit.hash.slice(0, 7)}> (${commit.author_name}) ${truncateString(commit.message)}`;
     } else {
-        return commitLine;
+        return `${commit.hash.slice(0, 7)} (${commit.author_name}) ${truncateString(commit.message)}`;
     }
 }
 
