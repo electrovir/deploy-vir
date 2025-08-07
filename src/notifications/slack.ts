@@ -1,4 +1,4 @@
-import {addPrefix, capitalizeFirstLetter} from '@augment-vir/common';
+import {addPrefix, capitalizeFirstLetter, log} from '@augment-vir/common';
 import {type ChatPostMessageArguments, type KnownBlock} from '@slack/web-api';
 import {joinUrlPaths} from 'url-vir';
 import {type SlackNotificationConfig} from '../config.js';
@@ -109,31 +109,34 @@ async function sendSlackMessage(
     slackConfig: Readonly<Pick<SlackNotificationConfig, 'avatarEmoji' | 'webhookUrl' | 'username'>>,
     body: Readonly<ChatPostMessageArguments>,
 ) {
+    const messageBody = {
+        ...body,
+        ...(slackConfig.avatarEmoji
+            ? {
+                  icon_emoji: slackConfig.avatarEmoji,
+              }
+            : {}),
+        ...(slackConfig.username
+            ? {
+                  username: slackConfig.username,
+              }
+            : {}),
+    };
+
     try {
         const response = await fetch(slackConfig.webhookUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                ...body,
-                ...(slackConfig.avatarEmoji
-                    ? {
-                          icon_emoji: slackConfig.avatarEmoji,
-                      }
-                    : {}),
-                ...(slackConfig.username
-                    ? {
-                          username: slackConfig.username,
-                      }
-                    : {}),
-            }),
+            body: JSON.stringify(messageBody),
         });
 
         if (!response.ok) {
             throw new Error(`Failed to send Slack webhook: ${response.status}`);
         }
     } catch (error) {
+        log.error(JSON.stringify(messageBody, null, 4));
         console.error('Error sending Slack message:', error);
     }
 }
