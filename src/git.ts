@@ -175,6 +175,11 @@ export async function pushDeploy(
 
         const shouldForcePush = await askQuestion(
             `\nDo you want to force push ${logColors.bold}${fromBranch}${logColors.reset} to ${logColors.bold}${toBranch}${logColors.reset}?\n\n${logColors.warning}This will overwrite the commits only on ${logColors.bold}${toBranch}${logColors.normalWeight}.${logColors.reset} (y/N): `,
+            {
+                timeout: {
+                    hours: 2,
+                },
+            },
         );
 
         if (shouldForcePush.toLowerCase() === 'y' || shouldForcePush.toLowerCase() === 'yes') {
