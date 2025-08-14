@@ -14,6 +14,6 @@ import {type DeployResult} from '../git.js';
 export type NotificationParams<Target extends NotificationTarget = NotificationTarget> = {
     deployResult: Readonly<DeployResult>;
     branchConfig: Readonly<DeployVirBranchConfig>;
-    repoConfig: Readonly<Pick<DeployVirRepoConfig, 'commitBaseUrl'>>;
+    repoConfig: Readonly<Pick<DeployVirRepoConfig, 'commitBaseUrl' | 'name'>>;
     notification: Readonly<Extract<NotificationConfig, {target: Target}>>;
 };

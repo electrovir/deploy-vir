@@ -1,4 +1,4 @@
-import {addPrefix, capitalizeFirstLetter, log} from '@augment-vir/common';
+import {addPrefix, log, setFirstLetterCasing, StringCase} from '@augment-vir/common';
 import {type ChatPostMessageArguments, type KnownBlock} from '@slack/web-api';
 import {joinUrlPaths} from 'url-vir';
 import {type SlackNotificationConfig} from '../config.js';
@@ -23,6 +23,30 @@ function formatCommit(baseCommitUrl: string | undefined, commit: Readonly<Commit
     }
 }
 
+const slackMaxSectionLength = 2500;
+
+function pushAndGet<T>(array: T[], item: T) {
+    array.push(item);
+    return item;
+}
+
+function chunkSectionLines(lines: ReadonlyArray<string>): string[][] {
+    const sectionLines: {length: number; lines: string[]}[] = [];
+
+    lines.forEach((line) => {
+        const latestSection = sectionLines.slice(-1)[0];
+
+        const currentSection =
+            latestSection && latestSection.length + line.length < slackMaxSectionLength
+                ? latestSection
+                : pushAndGet(sectionLines, {length: 0, lines: []});
+        currentSection.length += line.length;
+        currentSection.lines.push(line);
+    });
+
+    return sectionLines.map(({lines}) => lines);
+}
+
 /**
  * Send a notification to Slack.
  *
@@ -44,12 +68,10 @@ export async function sendNotificationToSlack({
         formatCommit(repoConfig.commitBaseUrl, commit),
     );
 
-    const deployedCommitBulletsText = deployedCommitBullets
-        .map((bullet) => `- ${bullet}`)
-        .join('\n');
+    const deployedCommitBulletLines = deployedCommitBullets.map((bullet) => `- ${bullet}`);
 
-    const overwrittenCommitBulletsText = overwrittenCommitBullets.length
-        ? overwrittenCommitBullets.map((bullet) => `- ${bullet}`).join('\n')
+    const overwrittenCommitBulletLines = overwrittenCommitBullets.length
+        ? overwrittenCommitBullets.map((bullet) => `- ${bullet}`)
         : undefined;
 
     const beforeText = repoConfig.commitBaseUrl
@@ -59,24 +81,12 @@ export async function sendNotificationToSlack({
         ? `<${joinUrlPaths(repoConfig.commitBaseUrl, after.hash)}|${after.hash.slice(0, 7)}>`
         : before.hash;
 
-    const overwrittenCommitBlocks: KnownBlock[] = overwrittenCommitBulletsText
-        ? [
-              {
-                  type: 'section',
-                  text: {
-                      type: 'mrkdwn',
-                      text: `\n*Overwritten Commits*\n${overwrittenCommitBulletsText}`,
-                  },
-              },
-          ]
-        : [];
-
     const blocks: KnownBlock[] = [
         {
             type: 'section',
             text: {
                 type: 'mrkdwn',
-                text: `*${capitalizeFirstLetter(branchConfig.deployName)}* Pushed`,
+                text: `*${setFirstLetterCasing(repoConfig.name, StringCase.Upper)} ${setFirstLetterCasing(branchConfig.deployName, StringCase.Upper)}* Pushed`,
             },
         },
         {
@@ -92,10 +102,39 @@ export async function sendNotificationToSlack({
             type: 'section',
             text: {
                 type: 'mrkdwn',
-                text: `\n*Deployed Commits*\n${deployedCommitBulletsText}`,
+                text: `\n*Deployed Commits*\n`,
             },
         },
-        ...overwrittenCommitBlocks,
+        ...chunkSectionLines(deployedCommitBulletLines).map((lines): KnownBlock => {
+            return {
+                type: 'section',
+                text: {
+                    type: 'mrkdwn',
+                    text: lines.join('\n'),
+                },
+            };
+        }),
+        ...(overwrittenCommitBulletLines?.length
+            ? ([
+                  {
+                      type: 'section',
+                      text: {
+                          type: 'mrkdwn',
+                          text: `\n*Overwritten Commits*\n`,
+                      },
+                  },
+
+                  ...chunkSectionLines(overwrittenCommitBulletLines).map((lines): KnownBlock => {
+                      return {
+                          type: 'section',
+                          text: {
+                              type: 'mrkdwn',
+                              text: lines.join('\n'),
+                          },
+                      };
+                  }),
+              ] satisfies KnownBlock[])
+            : []),
     ];
 
     await sendSlackMessage(notification, {
