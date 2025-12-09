@@ -90,6 +90,7 @@ export async function pushDeploy(
     git: Readonly<SimpleGit>,
     {deployName, fromBranch, toBranch}: Readonly<DeployVirBranchConfig>,
     remoteName: string,
+    bypassConfirmation = false,
 ): Promise<DeployResult> {
     assert.isTruthy(fromBranch, `Deploy '${deployName}' fromBranch cannot be empty.`);
     assert.isTruthy(toBranch, `Deploy '${deployName}' toBranch cannot be empty.`);
@@ -161,12 +162,14 @@ export async function pushDeploy(
         });
     }
 
-    const shouldPush = await confirm({
-        message: requiresForcePush
-            ? `\n${logColors.warning}Do you want to force push ${logColors.bold}${fromBranch}${logColors.normalWeight} to ${logColors.bold}${toBranch}${logColors.normalWeight}?\n\nThis will overwrite the commits only on ${logColors.bold}${toBranch}${logColors.normalWeight}.${logColors.reset}?`
-            : 'Ready to deploy?',
-        default: false,
-    });
+    const shouldPush =
+        bypassConfirmation ||
+        (await confirm({
+            message: requiresForcePush
+                ? `\n${logColors.warning}Do you want to force push ${logColors.bold}${fromBranch}${logColors.normalWeight} to ${logColors.bold}${toBranch}${logColors.normalWeight}?\n\nThis will overwrite the commits only on ${logColors.bold}${toBranch}${logColors.normalWeight}.${logColors.reset}?`
+                : 'Ready to deploy?',
+            default: false,
+        }));
 
     if (!shouldPush) {
         throw new KnownError(`Deploy aborted.`);

@@ -12,14 +12,31 @@ import {sendNotifications} from '../notifications/send-notifications.js';
  *
  * @category Internal
  */
-export async function runDeployVirCli(args: ReadonlyArray<string>, cwd = process.cwd()) {
+export async function runDeployVirCli(
+    {
+        args,
+        y,
+    }: {
+        y: boolean;
+        args: ReadonlyArray<string>;
+    },
+    cwd = process.cwd(),
+) {
     const configPath = assertWrap.isTruthy(args[0], 'Missing config path.');
     const repoName = assertWrap.isTruthy(args[1], 'Missing repo name.');
     const deployName = assertWrap.isTruthy(args[2], 'Missing deploy name.');
 
     const config = (await import(resolve(cwd, configPath))).default;
 
-    await runDeployVir({cwd, deployName, repoName}, config);
+    await runDeployVir(
+        {
+            cwd,
+            deployName,
+            repoName,
+            bypassConfirmation: y,
+        },
+        config,
+    );
 }
 
 /**
@@ -33,6 +50,8 @@ export type DeployVirArgs = {
     /** This much match a deploy name in your config. */
     deployName: string;
     cwd: string;
+    /** If true, manual confirmation is not required. */
+    bypassConfirmation: boolean;
 };
 
 /**
@@ -62,7 +81,12 @@ export async function runDeployVir(
         const remoteName = await getGitRemoteName(git, repoConfig);
         log.faint(`Remote: ${remoteName}`);
 
-        const deployResult = await pushDeploy(git, branchConfig, remoteName);
+        const deployResult = await pushDeploy(
+            git,
+            branchConfig,
+            remoteName,
+            args.bypassConfirmation,
+        );
 
         if (config.notifications?.length) {
             await sendNotifications(config.notifications, {
