@@ -26,13 +26,21 @@ export default defineDeployVirConfig({
             deploys: [
                 {
                     deployName: 'staging',
-                    fromBranch: 'dev',
-                    toBranch: 'staging',
+                    branches: [
+                        {
+                            fromBranch: 'dev',
+                            toBranch: 'staging',
+                        },
+                    ],
                 },
                 {
                     deployName: 'prod',
-                    fromBranch: 'staging',
-                    toBranch: 'prod',
+                    branches: [
+                        {
+                            fromBranch: 'staging',
+                            toBranch: 'prod',
+                        },
+                    ],
                 },
             ],
         },

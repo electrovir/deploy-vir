@@ -1,5 +1,5 @@
 import {assert, assertWrap, check} from '@augment-vir/assert';
-import {log, logColors} from '@augment-vir/common';
+import {awaitedBlockingMap, log, logColors} from '@augment-vir/common';
 import {confirm} from '@inquirer/prompts';
 import {type DefaultLogFields, type ListLogLine, type SimpleGit} from 'simple-git';
 import {type DeployVirBranchConfig, type DeployVirRepoConfig} from './config.js';
@@ -88,110 +88,112 @@ export type DeployResult = {
  */
 export async function pushDeploy(
     git: Readonly<SimpleGit>,
-    {deployName, fromBranch, toBranch}: Readonly<DeployVirBranchConfig>,
+    {deployName, branches}: Readonly<DeployVirBranchConfig>,
     remoteName: string,
     bypassConfirmation = false,
-): Promise<DeployResult> {
-    assert.isTruthy(fromBranch, `Deploy '${deployName}' fromBranch cannot be empty.`);
-    assert.isTruthy(toBranch, `Deploy '${deployName}' toBranch cannot be empty.`);
-    assert.isTruthy(remoteName, 'Remote name cannot be empty.');
+): Promise<DeployResult[]> {
+    return await awaitedBlockingMap(branches, async ({fromBranch, toBranch}) => {
+        assert.isTruthy(fromBranch, `Deploy '${deployName}' fromBranch cannot be empty.`);
+        assert.isTruthy(toBranch, `Deploy '${deployName}' toBranch cannot be empty.`);
+        assert.isTruthy(remoteName, 'Remote name cannot be empty.');
 
-    log.faint(`Pushing ${remoteName}/${fromBranch} to ${toBranch}`);
+        log.faint(`Pushing ${remoteName}/${fromBranch} to ${toBranch}`);
 
-    await git.fetch(remoteName, fromBranch);
-    await git.fetch(remoteName, toBranch);
+        await git.fetch(remoteName, fromBranch);
+        await git.fetch(remoteName, toBranch);
 
-    const pushString = `${remoteName}/${fromBranch}:${toBranch}`;
+        const pushString = `${remoteName}/${fromBranch}:${toBranch}`;
 
-    // Get the current commit on the target branch before pushing
-    const beforeCommit = assertWrap.isDefined(
-        (
-            await git.log([
-                `${remoteName}/${toBranch}`,
-                '-1',
-            ])
-        ).latest,
-        `Failed to get current commit for ${remoteName}/${toBranch}`,
-    );
-
-    const afterCommit = assertWrap.isDefined(
-        (
-            await git.log([
-                `${remoteName}/${fromBranch}`,
-                '-1',
-            ])
-        ).latest,
-        `Failed to get current commit for ${remoteName}/${fromBranch}`,
-    );
-
-    /** Get commits that are on {@link toBranch} but not on {@link fromBranch}. */
-    const commitsAhead = (
-        await git.log([
-            `${remoteName}/${toBranch}..${remoteName}/${fromBranch}`,
-        ])
-    ).all;
-
-    if (!commitsAhead.length) {
-        throw new KnownError('No commit diff: nothing to deploy!');
-    }
-
-    /** Get commits that are on {@link toBranch} but not on {@link fromBranch}. */
-    const commitsBehind = (
-        await git.log([
-            `${remoteName}/${fromBranch}..${remoteName}/${toBranch}`,
-        ])
-    ).all;
-
-    const requiresForcePush = commitsBehind.length > 0;
-
-    log.info(
-        `\n${requiresForcePush ? 'Only on' : 'Releasing from'} ${logColors.bold}${fromBranch}${logColors.reset}:`,
-    );
-    commitsAhead.forEach((commit, index) => {
-        log.faint(
-            `    ${index + 1}. ${commit.hash.slice(0, 7)} (${commit.author_name}) - ${commit.message}`,
+        // Get the current commit on the target branch before pushing
+        const beforeCommit = assertWrap.isDefined(
+            (
+                await git.log([
+                    `${remoteName}/${toBranch}`,
+                    '-1',
+                ])
+            ).latest,
+            `Failed to get current commit for ${remoteName}/${toBranch}`,
         );
-    });
 
-    if (requiresForcePush) {
-        log.info(`\nOnly on ${logColors.bold}${toBranch}${logColors.reset}:`);
-        commitsBehind.forEach((commit, index) => {
+        const afterCommit = assertWrap.isDefined(
+            (
+                await git.log([
+                    `${remoteName}/${fromBranch}`,
+                    '-1',
+                ])
+            ).latest,
+            `Failed to get current commit for ${remoteName}/${fromBranch}`,
+        );
+
+        /** Get commits that are on {@link toBranch} but not on {@link fromBranch}. */
+        const commitsAhead = (
+            await git.log([
+                `${remoteName}/${toBranch}..${remoteName}/${fromBranch}`,
+            ])
+        ).all;
+
+        if (!commitsAhead.length) {
+            throw new KnownError('No commit diff: nothing to deploy!');
+        }
+
+        /** Get commits that are on {@link toBranch} but not on {@link fromBranch}. */
+        const commitsBehind = (
+            await git.log([
+                `${remoteName}/${fromBranch}..${remoteName}/${toBranch}`,
+            ])
+        ).all;
+
+        const requiresForcePush = commitsBehind.length > 0;
+
+        log.info(
+            `\n${requiresForcePush ? 'Only on' : 'Releasing from'} ${logColors.bold}${fromBranch}${logColors.reset}:`,
+        );
+        commitsAhead.forEach((commit, index) => {
             log.faint(
                 `    ${index + 1}. ${commit.hash.slice(0, 7)} (${commit.author_name}) - ${commit.message}`,
             );
         });
-    }
 
-    const shouldPush =
-        bypassConfirmation ||
-        (await confirm({
-            message: requiresForcePush
-                ? `\n${logColors.warning}Do you want to force push ${logColors.bold}${fromBranch}${logColors.normalWeight} to ${logColors.bold}${toBranch}${logColors.normalWeight}?\n\nThis will overwrite the commits only on ${logColors.bold}${toBranch}${logColors.normalWeight}.${logColors.reset}?`
-                : 'Ready to deploy?',
-            default: false,
-        }));
+        if (requiresForcePush) {
+            log.info(`\nOnly on ${logColors.bold}${toBranch}${logColors.reset}:`);
+            commitsBehind.forEach((commit, index) => {
+                log.faint(
+                    `    ${index + 1}. ${commit.hash.slice(0, 7)} (${commit.author_name}) - ${commit.message}`,
+                );
+            });
+        }
 
-    if (!shouldPush) {
-        throw new KnownError(`Deploy aborted.`);
-    }
+        const shouldPush =
+            bypassConfirmation ||
+            (await confirm({
+                message: requiresForcePush
+                    ? `\n${logColors.warning}Do you want to force push ${logColors.bold}${fromBranch}${logColors.normalWeight} to ${logColors.bold}${toBranch}${logColors.normalWeight}?\n\nThis will overwrite the commits only on ${logColors.bold}${toBranch}${logColors.normalWeight}.${logColors.reset}?`
+                    : 'Ready to deploy?',
+                default: false,
+            }));
 
-    if (requiresForcePush) {
-        await git.push(remoteName, pushString, ['--force']);
-        log.warning(
-            `Force pushed ${logColors.bold}${fromBranch}${logColors.normalWeight} to ${logColors.bold}${toBranch}${logColors.reset}.`,
-        );
-    } else {
-        await git.push(remoteName, pushString);
-    }
+        if (!shouldPush) {
+            throw new KnownError(`Deploy aborted.`);
+        }
 
-    return {
-        deployCommits: {
-            deployedCommits: commitsAhead,
-            overwrittenCommits: commitsBehind,
-        },
-        branchStatus: {
-            before: beforeCommit,
-            after: afterCommit,
-        },
-    };
+        if (requiresForcePush) {
+            await git.push(remoteName, pushString, ['--force']);
+            log.warning(
+                `Force pushed ${logColors.bold}${fromBranch}${logColors.normalWeight} to ${logColors.bold}${toBranch}${logColors.reset}.`,
+            );
+        } else {
+            await git.push(remoteName, pushString);
+        }
+
+        return {
+            deployCommits: {
+                deployedCommits: commitsAhead,
+                overwrittenCommits: commitsBehind,
+            },
+            branchStatus: {
+                before: beforeCommit,
+                after: afterCommit,
+            },
+        };
+    });
 }

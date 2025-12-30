@@ -96,8 +96,10 @@ export type DeployVirRepoConfig = {
  */
 export type DeployVirBranchConfig = {
     deployName: string;
-    fromBranch: string;
-    toBranch: string;
+    branches: {
+        fromBranch: string;
+        toBranch: string;
+    }[];
 };
 
 /**
