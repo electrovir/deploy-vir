@@ -1,5 +1,6 @@
 import {assertWrap} from '@augment-vir/assert';
 import {awaitedForEach, extractErrorMessage, log} from '@augment-vir/common';
+import {select} from '@inquirer/prompts';
 import {resolve} from 'node:path';
 import simpleGit from 'simple-git';
 import {type DeployVirConfig} from '../config.js';
@@ -23,10 +24,34 @@ export async function runDeployVirCli(
     cwd = process.cwd(),
 ) {
     const configPath = assertWrap.isTruthy(args[0], 'Missing config path.');
-    const repoName = assertWrap.isTruthy(args[1], 'Missing repo name.');
-    const deployName = assertWrap.isTruthy(args[2], 'Missing deploy name.');
 
-    const config = (await import(resolve(cwd, configPath))).default;
+    const config = (await import(resolve(cwd, configPath))).default as DeployVirConfig;
+
+    const repoName = assertWrap.isTruthy(
+        args[1] ||
+            (await select({
+                message: 'Choose a repo to deploy:',
+                choices: config.repos.map((repo) => {
+                    return repo.name;
+                }),
+            })),
+        'Missing repo name.',
+    );
+    const deployName = assertWrap.isTruthy(
+        args[2] ||
+            (await select({
+                message: 'Choose a deploy to trigger:',
+                choices: assertWrap
+                    .isDefined(
+                        config.repos.find((repo) => repo.name === repoName),
+                        `Invalid repo name: '${repoName}'`,
+                    )
+                    .deploys.map((deploy) => {
+                        return deploy.deployName;
+                    }),
+            })),
+        'Missing deploy name.',
+    );
 
     await runDeployVir(
         {
