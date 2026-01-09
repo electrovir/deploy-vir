@@ -53,10 +53,10 @@ function chunkSectionLines(lines: ReadonlyArray<string>): string[][] {
  * @category Internal
  */
 export async function sendNotificationToSlack({
-    branchConfig,
     deployResult: {
         deployCommits: {deployedCommits, overwrittenCommits},
         branchStatus: {after, before},
+        toBranchName,
     },
     notification,
     repoConfig,
@@ -86,7 +86,7 @@ export async function sendNotificationToSlack({
             type: 'section',
             text: {
                 type: 'mrkdwn',
-                text: `*${setFirstLetterCasing(repoConfig.name, StringCase.Upper)} ${setFirstLetterCasing(branchConfig.deployName, StringCase.Upper)}* Pushed`,
+                text: `*${setFirstLetterCasing(repoConfig.name, StringCase.Upper)} ${setFirstLetterCasing(toBranchName, StringCase.Upper)}* Pushed`,
             },
         },
         {
