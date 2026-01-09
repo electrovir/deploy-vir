@@ -2,7 +2,7 @@ import {assertWrap} from '@augment-vir/assert';
 import {awaitedForEach, extractErrorMessage, log} from '@augment-vir/common';
 import {select} from '@inquirer/prompts';
 import {resolve} from 'node:path';
-import simpleGit from 'simple-git';
+import {simpleGit} from 'simple-git';
 import {type DeployVirConfig} from '../config.js';
 import {getGitRemoteName, pushDeploy} from '../git.js';
 import {KnownError} from '../known.error.js';
