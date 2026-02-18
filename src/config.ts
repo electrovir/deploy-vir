@@ -102,6 +102,7 @@ export type DeployVirBranchConfig = {
         toBranch: string;
         enableNotifications?: boolean | undefined;
     }[];
+    enableNotifications?: boolean | undefined;
 };
 
 /**

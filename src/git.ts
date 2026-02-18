@@ -208,7 +208,12 @@ export async function pushDeploy(
                 },
             };
 
-            if (notifications?.length && (repoConfig.enableNotifications || enableNotifications)) {
+            if (
+                notifications?.length &&
+                (repoConfig.enableNotifications ||
+                    enableNotifications ||
+                    branchConfig.enableNotifications)
+            ) {
                 await sendNotifications(notifications, {
                     branchConfig,
                     deployResult,
