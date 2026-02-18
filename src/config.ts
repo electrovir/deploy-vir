@@ -87,6 +87,7 @@ export type DeployVirRepoConfig = {
      */
     commitBaseUrl?: string | undefined;
     deploys: DeployVirBranchConfig[];
+    enableNotifications?: boolean | undefined;
 };
 
 /**
@@ -99,6 +100,7 @@ export type DeployVirBranchConfig = {
     branches: {
         fromBranch: string;
         toBranch: string;
+        enableNotifications?: boolean | undefined;
     }[];
 };
 

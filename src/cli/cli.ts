@@ -1,12 +1,11 @@
 import {assertWrap} from '@augment-vir/assert';
-import {awaitedForEach, extractErrorMessage, log} from '@augment-vir/common';
+import {extractErrorMessage, log} from '@augment-vir/common';
 import {select} from '@inquirer/prompts';
 import {resolve} from 'node:path';
 import {simpleGit} from 'simple-git';
 import {type DeployVirConfig} from '../config.js';
 import {getGitRemoteName, pushDeploy} from '../git.js';
 import {KnownError} from '../known.error.js';
-import {sendNotifications} from '../notifications/send-notifications.js';
 
 /**
  * Run the deploy-vir CLI.
@@ -106,24 +105,14 @@ export async function runDeployVir(
         const remoteName = await getGitRemoteName(git, repoConfig);
         log.faint(`Remote: ${remoteName}`);
 
-        const deployResults = await pushDeploy(
+        await pushDeploy(
             git,
             branchConfig,
+            repoConfig,
             remoteName,
+            config.notifications,
             args.bypassConfirmation,
         );
-
-        const notifications = config.notifications;
-
-        if (notifications?.length) {
-            await awaitedForEach(deployResults, async (deployResult) => {
-                await sendNotifications(notifications, {
-                    branchConfig,
-                    deployResult,
-                    repoConfig,
-                });
-            });
-        }
     } catch (error) {
         if (error instanceof KnownError) {
             /** If its a known error, don't log the whole stack trace. */

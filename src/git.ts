@@ -2,8 +2,13 @@ import {assert, assertWrap, check} from '@augment-vir/assert';
 import {awaitedBlockingMap, log, logColors} from '@augment-vir/common';
 import {confirm} from '@inquirer/prompts';
 import {type DefaultLogFields, type ListLogLine, type SimpleGit} from 'simple-git';
-import {type DeployVirBranchConfig, type DeployVirRepoConfig} from './config.js';
+import {
+    type DeployVirBranchConfig,
+    type DeployVirRepoConfig,
+    type NotificationConfig,
+} from './config.js';
 import {KnownError} from './known.error.js';
+import {sendNotifications} from './notifications/send-notifications.js';
 
 /**
  * Find the git remote's name, or create a new one.
@@ -89,13 +94,16 @@ export type DeployResult = {
  */
 export async function pushDeploy(
     git: Readonly<SimpleGit>,
-    {deployName, branches}: Readonly<DeployVirBranchConfig>,
+    branchConfig: Readonly<DeployVirBranchConfig>,
+    repoConfig: Readonly<DeployVirRepoConfig>,
     remoteName: string,
+    notifications: ReadonlyArray<Readonly<NotificationConfig>> | undefined,
     bypassConfirmation = false,
 ): Promise<DeployResult[]> {
+    const {deployName, branches} = branchConfig;
     return await awaitedBlockingMap(
         branches,
-        async ({fromBranch, toBranch}): Promise<DeployResult> => {
+        async ({fromBranch, toBranch, enableNotifications}): Promise<DeployResult> => {
             assert.isTruthy(fromBranch, `Deploy '${deployName}' fromBranch cannot be empty.`);
             assert.isTruthy(toBranch, `Deploy '${deployName}' toBranch cannot be empty.`);
             assert.isTruthy(remoteName, 'Remote name cannot be empty.');
@@ -188,7 +196,7 @@ export async function pushDeploy(
                 await git.push(remoteName, pushString);
             }
 
-            return {
+            const deployResult: DeployResult = {
                 toBranchName: toBranch,
                 deployCommits: {
                     deployedCommits: commitsAhead,
@@ -199,6 +207,16 @@ export async function pushDeploy(
                     after: afterCommit,
                 },
             };
+
+            if (notifications?.length && (repoConfig.enableNotifications || enableNotifications)) {
+                await sendNotifications(notifications, {
+                    branchConfig,
+                    deployResult,
+                    repoConfig,
+                });
+            }
+
+            return deployResult;
         },
     );
 }
