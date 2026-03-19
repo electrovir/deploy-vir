@@ -39,7 +39,10 @@ function chunkSectionLines(lines: ReadonlyArray<string>): string[][] {
         const currentSection =
             latestSection && latestSection.length + line.length < slackMaxSectionLength
                 ? latestSection
-                : pushAndGet(sectionLines, {length: 0, lines: []});
+                : pushAndGet(sectionLines, {
+                      length: 0,
+                      lines: [],
+                  });
         currentSection.length += line.length;
         currentSection.lines.push(line);
     });
@@ -139,7 +142,10 @@ export async function sendNotificationToSlack({
 
     await sendSlackMessage(notification, {
         attachments: [],
-        channel: addPrefix({value: notification.channelName, prefix: '#'}),
+        channel: addPrefix({
+            value: notification.channelName,
+            prefix: '#',
+        }),
         blocks,
     });
 }
