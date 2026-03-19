@@ -3,6 +3,7 @@ import {awaitedBlockingMap, log, logColors} from '@augment-vir/common';
 import {confirm} from '@inquirer/prompts';
 import {type DefaultLogFields, type ListLogLine, type SimpleGit} from 'simple-git';
 import {
+    type DeployNotificationConfig,
     type DeployVirBranchConfig,
     type DeployVirRepoConfig,
     type NotificationConfig,
@@ -208,13 +209,15 @@ export async function pushDeploy(
                 },
             };
 
-            if (
-                notifications?.length &&
-                (repoConfig.enableNotifications ||
-                    enableNotifications ||
-                    branchConfig.enableNotifications)
-            ) {
-                await sendNotifications(notifications, {
+            const resolvedNotifications = resolveNotifications({
+                branchConfig,
+                enableNotifications,
+                globalNotifications: notifications,
+                repoConfig,
+            });
+
+            if (resolvedNotifications.length) {
+                await sendNotifications(resolvedNotifications, {
                     branchConfig,
                     deployResult,
                     repoConfig,
@@ -224,4 +227,53 @@ export async function pushDeploy(
             return deployResult;
         },
     );
+}
+
+function resolveNotifications({
+    branchConfig,
+    enableNotifications,
+    globalNotifications,
+    repoConfig,
+}: Readonly<{
+    branchConfig: Readonly<DeployVirBranchConfig>;
+    enableNotifications: boolean | undefined;
+    globalNotifications: ReadonlyArray<Readonly<NotificationConfig>> | undefined;
+    repoConfig: Readonly<DeployVirRepoConfig>;
+}>): NotificationConfig[] {
+    if (branchConfig.notifications?.length) {
+        return resolveDeployNotifications(branchConfig.notifications, globalNotifications);
+    }
+
+    const notificationsEnabled =
+        repoConfig.enableNotifications || enableNotifications || branchConfig.enableNotifications;
+
+    if (notificationsEnabled && globalNotifications?.length) {
+        return [...globalNotifications];
+    }
+
+    return [];
+}
+
+function resolveDeployNotifications(
+    deployNotifications: ReadonlyArray<Readonly<DeployNotificationConfig>>,
+    globalNotifications: ReadonlyArray<Readonly<NotificationConfig>> | undefined,
+): NotificationConfig[] {
+    return deployNotifications.map((deployNotification): NotificationConfig => {
+        if (deployNotification.webhookUrl) {
+            return deployNotification as NotificationConfig;
+        }
+
+        const globalWebhookUrl = globalNotifications?.[0]?.webhookUrl;
+
+        if (!globalWebhookUrl) {
+            throw new KnownError(
+                `Deploy notification for target '${deployNotification.target}' is missing webhookUrl and no top-level notification was found to fall back on.`,
+            );
+        }
+
+        return {
+            ...deployNotification,
+            webhookUrl: globalWebhookUrl,
+        };
+    });
 }

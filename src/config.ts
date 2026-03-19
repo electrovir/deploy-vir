@@ -58,6 +58,16 @@ export type SlackNotificationConfig = {
 export type NotificationConfig = SlackNotificationConfig;
 
 /**
+ * A deploy-level notification override. Same as {@link NotificationConfig} but `webhookUrl` is
+ * optional — when omitted, the first matching top-level notification's `webhookUrl` is used.
+ *
+ * @category Config
+ */
+export type DeployNotificationConfig = Omit<SlackNotificationConfig, 'webhookUrl'> & {
+    webhookUrl?: string | undefined;
+};
+
+/**
  * A repo config for deploying.
  *
  * @category Config
@@ -103,6 +113,13 @@ export type DeployVirBranchConfig = {
         enableNotifications?: boolean | undefined;
     }[];
     enableNotifications?: boolean | undefined;
+    /**
+     * Deploy-level notification overrides. When set, these are used instead of the top-level
+     * notifications. If a notification here omits `webhookUrl`, the first top-level notification
+     * with the same `target` provides it. Setting this also implicitly enables notifications for
+     * this deploy.
+     */
+    notifications?: DeployNotificationConfig[] | undefined;
 };
 
 /**
