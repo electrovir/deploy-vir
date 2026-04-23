@@ -216,6 +216,7 @@ export async function pushDeploy(
                     branchConfig,
                     deployResult,
                     fromBranch,
+                    newCommits: commitsAhead,
                     remoteName,
                     repoConfig,
                     toBranch,

@@ -1,5 +1,5 @@
 import {type MaybePromise, type PartialWithUndefined} from '@augment-vir/common';
-import {type DeployResult} from './git.js';
+import {type Commit, type DeployResult} from './git.js';
 
 /**
  * The full deploy-vir config object.
@@ -42,6 +42,11 @@ export type PostAcceptHookParams = {
     toBranch: string;
     remoteName: string;
     deployResult: Readonly<DeployResult>;
+    /**
+     * All commits included in this deploy (the commits being pushed from `fromBranch` to
+     * `toBranch`).
+     */
+    newCommits: ReadonlyArray<Readonly<Commit>>;
 };
 
 /**
