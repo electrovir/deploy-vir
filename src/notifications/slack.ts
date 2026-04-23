@@ -61,6 +61,7 @@ export async function sendNotificationToSlack({
         branchStatus: {after, before},
         toBranchName,
     },
+    hookResult,
     notification,
     repoConfig,
 }: Readonly<NotificationParams>) {
@@ -92,6 +93,17 @@ export async function sendNotificationToSlack({
                 text: `*${setFirstLetterCasing(repoConfig.name, StringCase.Upper)} ${setFirstLetterCasing(toBranchName, StringCase.Upper)}* Pushed`,
             },
         },
+        ...(hookResult?.prependToNotification
+            ? ([
+                  {
+                      type: 'section',
+                      text: {
+                          type: 'mrkdwn',
+                          text: hookResult.prependToNotification,
+                      },
+                  },
+              ] satisfies KnownBlock[])
+            : []),
         {
             type: 'context',
             elements: [
@@ -136,6 +148,17 @@ export async function sendNotificationToSlack({
                           },
                       };
                   }),
+              ] satisfies KnownBlock[])
+            : []),
+        ...(hookResult?.appendToNotification
+            ? ([
+                  {
+                      type: 'section',
+                      text: {
+                          type: 'mrkdwn',
+                          text: hookResult.appendToNotification,
+                      },
+                  },
               ] satisfies KnownBlock[])
             : []),
     ];

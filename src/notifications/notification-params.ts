@@ -3,6 +3,7 @@ import {
     type DeployVirRepoConfig,
     type NotificationConfig,
     type NotificationTarget,
+    type PostAcceptHookResult,
 } from '../config.js';
 import {type DeployResult} from '../git.js';
 
@@ -16,4 +17,5 @@ export type NotificationParams<Target extends NotificationTarget = NotificationT
     branchConfig: Readonly<DeployVirBranchConfig>;
     repoConfig: Readonly<Pick<DeployVirRepoConfig, 'commitBaseUrl' | 'name'>>;
     notification: Readonly<Extract<NotificationConfig, {target: Target}>>;
+    hookResult?: Readonly<PostAcceptHookResult> | undefined;
 };

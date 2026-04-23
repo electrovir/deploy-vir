@@ -1,4 +1,4 @@
-import {type MaybePromise} from '@augment-vir/common';
+import {type MaybePromise, type PartialWithUndefined} from '@augment-vir/common';
 import {type DeployResult} from './git.js';
 
 /**
@@ -20,9 +20,14 @@ export type DeployVirConfig = {
 export type DeployVirHooks = {
     /**
      * Runs after the user accepts (or bypasses confirmation for) a deploy and the push has
-     * completed successfully. Fires once per branch deploy.
+     * completed successfully. Fires once per branch deploy. May optionally return values that
+     * modify the resulting notification message.
      */
-    postAccept?: ((params: Readonly<PostAcceptHookParams>) => MaybePromise<void>) | undefined;
+    postAccept?:
+        | ((
+              params: Readonly<PostAcceptHookParams>,
+          ) => MaybePromise<PostAcceptHookResult | void | undefined>)
+        | undefined;
 };
 
 /**
@@ -38,6 +43,19 @@ export type PostAcceptHookParams = {
     remoteName: string;
     deployResult: Readonly<DeployResult>;
 };
+
+/**
+ * Optional values that a {@link DeployVirHooks.postAccept} hook can return to augment the resulting
+ * notification message.
+ *
+ * @category Config
+ */
+export type PostAcceptHookResult = PartialWithUndefined<{
+    /** Inserted into the notification immediately after the "<X> Pushed" header line. */
+    prependToNotification: string;
+    /** Appended to the very end of the notification message. */
+    appendToNotification: string;
+}>;
 
 /**
  * All available targets for sending notifications to.

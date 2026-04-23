@@ -211,16 +211,15 @@ export async function pushDeploy(
                 },
             };
 
-            if (hooks?.postAccept) {
-                await hooks.postAccept({
+            const hookResult =
+                (await hooks?.postAccept?.({
                     branchConfig,
                     deployResult,
                     fromBranch,
                     remoteName,
                     repoConfig,
                     toBranch,
-                });
-            }
+                })) || undefined;
 
             const resolvedNotifications = resolveNotifications({
                 branchConfig,
@@ -233,6 +232,7 @@ export async function pushDeploy(
                 await sendNotifications(resolvedNotifications, {
                     branchConfig,
                     deployResult,
+                    hookResult: hookResult || undefined,
                     repoConfig,
                 });
             }
