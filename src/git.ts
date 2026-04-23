@@ -5,6 +5,7 @@ import {type DefaultLogFields, type ListLogLine, type SimpleGit} from 'simple-gi
 import {
     type DeployNotificationConfig,
     type DeployVirBranchConfig,
+    type DeployVirHooks,
     type DeployVirRepoConfig,
     type NotificationConfig,
 } from './config.js';
@@ -100,6 +101,7 @@ export async function pushDeploy(
     remoteName: string,
     notifications: ReadonlyArray<Readonly<NotificationConfig>> | undefined,
     bypassConfirmation = false,
+    hooks: Readonly<DeployVirHooks> | undefined,
 ): Promise<DeployResult[]> {
     const {deployName, branches} = branchConfig;
     return await awaitedBlockingMap(
@@ -208,6 +210,17 @@ export async function pushDeploy(
                     after: afterCommit,
                 },
             };
+
+            if (hooks?.postAccept) {
+                await hooks.postAccept({
+                    branchConfig,
+                    deployResult,
+                    fromBranch,
+                    remoteName,
+                    repoConfig,
+                    toBranch,
+                });
+            }
 
             const resolvedNotifications = resolveNotifications({
                 branchConfig,

@@ -1,3 +1,6 @@
+import {type MaybePromise} from '@augment-vir/common';
+import {type DeployResult} from './git.js';
+
 /**
  * The full deploy-vir config object.
  *
@@ -6,6 +9,34 @@
 export type DeployVirConfig = {
     repos: DeployVirRepoConfig[];
     notifications?: NotificationConfig[] | undefined;
+    hooks?: DeployVirHooks | undefined;
+};
+
+/**
+ * Hooks to run at various points during a deploy.
+ *
+ * @category Config
+ */
+export type DeployVirHooks = {
+    /**
+     * Runs after the user accepts (or bypasses confirmation for) a deploy and the push has
+     * completed successfully. Fires once per branch deploy.
+     */
+    postAccept?: ((params: Readonly<PostAcceptHookParams>) => MaybePromise<void>) | undefined;
+};
+
+/**
+ * Params passed to a {@link DeployVirHooks.postAccept} hook.
+ *
+ * @category Config
+ */
+export type PostAcceptHookParams = {
+    repoConfig: Readonly<DeployVirRepoConfig>;
+    branchConfig: Readonly<DeployVirBranchConfig>;
+    fromBranch: string;
+    toBranch: string;
+    remoteName: string;
+    deployResult: Readonly<DeployResult>;
 };
 
 /**

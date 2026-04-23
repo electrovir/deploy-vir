@@ -112,6 +112,7 @@ export async function runDeployVir(
             remoteName,
             config.notifications,
             args.bypassConfirmation,
+            config.hooks,
         );
     } catch (error) {
         if (error instanceof KnownError) {
