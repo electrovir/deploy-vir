@@ -94,6 +94,7 @@ export type DeployResult = {
  *
  * @category Internal
  */
+// eslint-disable-next-line @virmator/prefer-params-object
 export async function pushDeploy(
     git: Readonly<SimpleGit>,
     branchConfig: Readonly<DeployVirBranchConfig>,
@@ -187,7 +188,7 @@ export async function pushDeploy(
                 }));
 
             if (!shouldPush) {
-                throw new KnownError(`Deploy aborted.`);
+                throw new KnownError('Deploy aborted.');
             }
 
             if (requiresForcePush) {

@@ -117,7 +117,7 @@ export async function sendNotificationToSlack({
             type: 'section',
             text: {
                 type: 'mrkdwn',
-                text: `\n*Deployed Commits*\n`,
+                text: '\n*Deployed Commits*\n',
             },
         },
         ...chunkSectionLines(deployedCommitBulletLines).map((lines): KnownBlock => {
@@ -135,7 +135,7 @@ export async function sendNotificationToSlack({
                       type: 'section',
                       text: {
                           type: 'mrkdwn',
-                          text: `\n*Overwritten Commits*\n`,
+                          text: '\n*Overwritten Commits*\n',
                       },
                   },
 
