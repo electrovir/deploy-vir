@@ -1,8 +1,8 @@
 import {addPrefix, log, setFirstLetterCasing, StringCase} from '@augment-vir/common';
 import {type ChatPostMessageArguments, type KnownBlock} from '@slack/web-api';
 import {joinUrlPaths} from 'url-vir';
+import {getCommitAuthorName, type Commit} from '../commit.js';
 import {type SlackNotificationConfig} from '../config.js';
-import {type Commit} from '../git.js';
 import {type NotificationParams} from './notification-params.js';
 
 export {type ChatPostMessageArguments} from '@slack/web-api';
@@ -17,9 +17,9 @@ function truncateString(value: string, truncateAt = 100): string {
 
 function formatCommit(baseCommitUrl: string | undefined, commit: Readonly<Commit>) {
     if (baseCommitUrl) {
-        return `<${joinUrlPaths(baseCommitUrl, commit.hash)}|${commit.hash.slice(0, 7)}> (${commit.author_name}) ${truncateString(commit.message)}`;
+        return `<${joinUrlPaths(baseCommitUrl, commit.hash)}|${commit.hash.slice(0, 7)}> (${getCommitAuthorName(commit)}) ${truncateString(commit.message)}`;
     } else {
-        return `${commit.hash.slice(0, 7)} (${commit.author_name}) ${truncateString(commit.message)}`;
+        return `${commit.hash.slice(0, 7)} (${getCommitAuthorName(commit)}) ${truncateString(commit.message)}`;
     }
 }
 

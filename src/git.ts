@@ -1,7 +1,8 @@
 import {assert, assertWrap, check} from '@augment-vir/assert';
 import {awaitedBlockingMap, log, logColors} from '@augment-vir/common';
 import {confirm} from '@inquirer/prompts';
-import {type DefaultLogFields, type ListLogLine, type SimpleGit} from 'simple-git';
+import {type SimpleGit} from 'simple-git';
+import {getCommitAuthorName, type Commit} from './commit.js';
 import {
     type DeployNotificationConfig,
     type DeployVirBranchConfig,
@@ -51,13 +52,6 @@ export async function getGitRemoteName(
 
     return newRemoteName;
 }
-
-/**
- * A git commit.
- *
- * @category Internal
- */
-export type Commit = DefaultLogFields & ListLogLine;
 
 /**
  * All commits involved in a deploy.
@@ -165,7 +159,7 @@ export async function pushDeploy(
             );
             commitsAhead.forEach((commit, index) => {
                 log.faint(
-                    `    ${index + 1}. ${commit.hash.slice(0, 7)} (${commit.author_name}) - ${commit.message}`,
+                    `    ${index + 1}. ${commit.hash.slice(0, 7)} (${getCommitAuthorName(commit)}) - ${commit.message}`,
                 );
             });
 
@@ -173,7 +167,7 @@ export async function pushDeploy(
                 log.info(`\nOnly on ${logColors.bold}${toBranch}${logColors.reset}:`);
                 commitsBehind.forEach((commit, index) => {
                     log.faint(
-                        `    ${index + 1}. ${commit.hash.slice(0, 7)} (${commit.author_name}) - ${commit.message}`,
+                        `    ${index + 1}. ${commit.hash.slice(0, 7)} (${getCommitAuthorName(commit)}) - ${commit.message}`,
                     );
                 });
             }

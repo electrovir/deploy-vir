@@ -1,4 +1,5 @@
 export * from './cli/cli.js';
+export * from './commit.js';
 export * from './config.js';
 export * from './git.js';
 export * from './known.error.js';

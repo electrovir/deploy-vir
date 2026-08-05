@@ -1,6 +1,6 @@
 {
     "name": "deploy-vir",
-    "version": "3.4.1",
+    "version": "3.4.2",
     "description": "Deploy a branch to another branch with notifications.",
     "keywords": [
         "deploy",
@@ -32,7 +32,8 @@
         "format": "virmator format",
         "lint": "virmator lint fix",
         "publish": "virmator publish npm run test:all",
-        "test:all": "npm run compile && runstorm --names spelling,format,docs,deps,lint \"npm run test:spelling\" \"npm run test:format\" \"npm run test:docs\" \"npm run test:deps\" \"npm run test:lint\"",
+        "test": "virmator test node",
+        "test:all": "npm run compile && runstorm --names spelling,format,docs,deps,lint,test \"npm run test:spelling\" \"npm run test:format\" \"npm run test:docs\" \"npm run test:deps\" \"npm run test:lint\" \"npm test\"",
         "test:deps": "virmator deps check",
         "test:docs": "virmator docs check",
         "test:format": "virmator format check",
@@ -52,6 +53,7 @@
         "url-vir": "^2.1.10"
     },
     "devDependencies": {
+        "@augment-vir/test": "^32.2.1",
         "@eslint/eslintrc": "^3.3.6",
         "@eslint/js": "^10.0.1",
         "@stylistic/eslint-plugin": "^5.10.0",

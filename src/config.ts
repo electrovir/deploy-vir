@@ -1,5 +1,6 @@
 import {type MaybePromise, type PartialWithUndefined} from '@augment-vir/common';
-import {type Commit, type DeployResult} from './git.js';
+import {type Commit} from './commit.js';
+import {type DeployResult} from './git.js';
 
 /**
  * The full deploy-vir config object.
