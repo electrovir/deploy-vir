@@ -27,10 +27,9 @@ export async function getGitRemoteName(
 
     const remotes = await git.getRemotes(true);
 
-    const remoteMatchByUrl = remotes.find(
-        (remote) =>
-            remote.refs.fetch === repoConfig.gitUrl || remote.refs.push === repoConfig.gitUrl,
-    );
+    const remoteMatchByUrl = remotes.find((remote) => {
+        return remote.refs.fetch === repoConfig.gitUrl || remote.refs.push === repoConfig.gitUrl;
+    });
 
     if (remoteMatchByUrl) {
         return remoteMatchByUrl.name;
