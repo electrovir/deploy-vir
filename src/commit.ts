@@ -1,3 +1,6 @@
+import {check} from '@augment-vir/assert';
+import {extractErrorMessage, log, type PartialWithUndefined} from '@augment-vir/common';
+import {runShellCommand} from '@augment-vir/node';
 import {type DefaultLogFields, type ListLogLine} from 'simple-git';
 
 /**
@@ -8,18 +11,29 @@ import {type DefaultLogFields, type ListLogLine} from 'simple-git';
 export type Commit = DefaultLogFields & ListLogLine;
 
 const coAuthorRegExp = /^co[- \t]*authored[- \t]*by:(.*)$/gim;
+const pullRequestNumberRegExp = /#(\d+)/;
 const botNameSuffix = '[bot]';
+
+/**
+ * Each `gh` lookup is a network request and each commit's author name gets read more than once (CLI
+ * output and notifications), so results are cached by their lookup key.
+ */
+const pullRequestAssigneeCache = new Map<string, Promise<string | undefined>>();
 
 /**
  * Extract the human author name for a commit. Commits authored by a bot (a name with a `[bot]`
  * suffix, like GitHub's merge queue bot) are attributed to their first non-bot `Co-authored-by:`
- * trailer instead.
+ * trailer instead. If the commit has no such trailer, its pull request's first non-bot assignee is
+ * used (requires the `gh` CLI). All fallbacks resolve to the original bot name.
  *
  * @category Internal
  */
-export function getCommitAuthorName(
-    commit: Readonly<Pick<Commit, 'author_name' | 'body'>>,
-): string {
+export async function getCommitAuthorName(
+    commit: Readonly<
+        Pick<Commit, 'author_name' | 'body'> &
+            PartialWithUndefined<Pick<Commit, 'hash' | 'message'>>
+    >,
+): Promise<string> {
     if (!commit.author_name.endsWith(botNameSuffix)) {
         return commit.author_name;
     }
@@ -29,5 +43,68 @@ export function getCommitAuthorName(
         .map((match) => (match[1] || '').split('<')[0]?.trim())
         .find((name) => name && !name.endsWith(botNameSuffix));
 
-    return coAuthorName || commit.author_name;
+    return coAuthorName || (await getPullRequestAssigneeName(commit)) || commit.author_name;
+}
+
+function getPullRequestAssigneeName(
+    commit: Readonly<PartialWithUndefined<Pick<Commit, 'hash' | 'message'>>>,
+): Promise<string | undefined> {
+    const pullRequestNumber = commit.message?.match(pullRequestNumberRegExp)?.[1];
+    const cacheKey = pullRequestNumber || commit.hash;
+
+    if (!cacheKey) {
+        return Promise.resolve(undefined);
+    }
+
+    const cached = pullRequestAssigneeCache.get(cacheKey);
+
+    if (cached) {
+        return cached;
+    }
+
+    const pending = fetchPullRequestAssigneeName(
+        pullRequestNumber
+            ? `gh pr view ${pullRequestNumber} --json assignees`
+            : `gh pr list --search ${cacheKey} --state merged --limit 1 --json assignees`,
+    );
+    pullRequestAssigneeCache.set(cacheKey, pending);
+
+    return pending;
+}
+
+async function fetchPullRequestAssigneeName(command: string): Promise<string | undefined> {
+    try {
+        const output = await runShellCommand(command, {
+            rejectOnError: true,
+        });
+
+        return extractAssigneeName(JSON.parse(output.stdout));
+    } catch (error) {
+        log.faint(`Failed to read a pull request assignee: ${extractErrorMessage(error)}`);
+        return undefined;
+    }
+}
+
+function extractAssigneeName(parsedJson: unknown): string | undefined {
+    /** `gh pr list` outputs an array, `gh pr view` outputs a single pull request. */
+    const pullRequest = check.isArray(parsedJson) ? parsedJson[0] : parsedJson;
+
+    if (!check.hasKey(pullRequest, 'assignees') || !check.isArray(pullRequest.assignees)) {
+        return undefined;
+    }
+
+    return pullRequest.assignees
+        .map((assignee) => {
+            const name =
+                check.hasKey(assignee, 'name') && check.isString(assignee.name)
+                    ? assignee.name
+                    : '';
+            const login =
+                check.hasKey(assignee, 'login') && check.isString(assignee.login)
+                    ? assignee.login
+                    : '';
+
+            return name || login;
+        })
+        .find((name) => name && !name.endsWith(botNameSuffix));
 }

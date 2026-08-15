@@ -5,9 +5,9 @@ import {describe, it} from 'node:test';
 import {getCommitAuthorName} from './commit.js';
 
 describe(getCommitAuthorName.name, () => {
-    it('uses the author name for a human author', () => {
+    it('uses the author name for a human author', async () => {
         assert.strictEquals(
-            getCommitAuthorName({
+            await getCommitAuthorName({
                 author_name: 'Benjamin DeMann',
                 body: 'Co-authored-by: electrovir <electrovir@users.noreply.github.com>\n',
             }),
@@ -15,9 +15,9 @@ describe(getCommitAuthorName.name, () => {
         );
     });
 
-    it('uses the co-author for a bot author', () => {
+    it('uses the co-author for a bot author', async () => {
         assert.strictEquals(
-            getCommitAuthorName({
+            await getCommitAuthorName({
                 author_name: 'merge-bot[bot]',
                 body: 'Co-authored-by: electrovir <electrovir@users.noreply.github.com>\n',
             }),
@@ -25,9 +25,9 @@ describe(getCommitAuthorName.name, () => {
         );
     });
 
-    it('skips bot co-authors', () => {
+    it('skips bot co-authors', async () => {
         assert.strictEquals(
-            getCommitAuthorName({
+            await getCommitAuthorName({
                 author_name: 'merge-bot[bot]',
                 body: [
                     'Co-authored-by: deploy-bot[bot] <deploy-bot@users.noreply.github.com>',
@@ -38,9 +38,9 @@ describe(getCommitAuthorName.name, () => {
         );
     });
 
-    it('falls back to the bot name when there are no co-authors', () => {
+    it('falls back to the bot name when there are no co-authors', async () => {
         assert.strictEquals(
-            getCommitAuthorName({
+            await getCommitAuthorName({
                 author_name: 'merge-bot[bot]',
                 body: 'just a commit body\n',
             }),
@@ -48,9 +48,9 @@ describe(getCommitAuthorName.name, () => {
         );
     });
 
-    it('falls back to the bot name when all co-authors are bots', () => {
+    it('falls back to the bot name when all co-authors are bots', async () => {
         assert.strictEquals(
-            getCommitAuthorName({
+            await getCommitAuthorName({
                 author_name: 'merge-bot[bot]',
                 body: 'Co-authored-by: deploy-bot[bot] <deploy-bot@users.noreply.github.com>\n',
             }),
@@ -58,19 +58,21 @@ describe(getCommitAuthorName.name, () => {
         );
     });
 
-    it('handles co-author trailer separator variations', () => {
+    it('handles co-author trailer separator variations', async () => {
         assert.deepEquals(
-            [
-                'Coauthored-by:',
-                'Co authored by:',
-                'Co-authored  by:',
-                'Coauthoredby:',
-            ].map((trailerStart) => {
-                return getCommitAuthorName({
-                    author_name: 'merge-bot[bot]',
-                    body: `${trailerStart} electrovir <electrovir@users.noreply.github.com>\n`,
-                });
-            }),
+            await Promise.all(
+                [
+                    'Coauthored-by:',
+                    'Co authored by:',
+                    'Co-authored  by:',
+                    'Coauthoredby:',
+                ].map(async (trailerStart) => {
+                    return await getCommitAuthorName({
+                        author_name: 'merge-bot[bot]',
+                        body: `${trailerStart} electrovir <electrovir@users.noreply.github.com>\n`,
+                    });
+                }),
+            ),
             [
                 'electrovir',
                 'electrovir',
@@ -80,9 +82,9 @@ describe(getCommitAuthorName.name, () => {
         );
     });
 
-    it('handles co-author trailers without an email', () => {
+    it('handles co-author trailers without an email', async () => {
         assert.strictEquals(
-            getCommitAuthorName({
+            await getCommitAuthorName({
                 author_name: 'merge-bot[bot]',
                 body: 'co-authored-by:   electrovir  \r\n',
             }),

@@ -1,5 +1,5 @@
 import {assert, assertWrap, check} from '@augment-vir/assert';
-import {awaitedBlockingMap, log, logColors} from '@augment-vir/common';
+import {awaitedBlockingMap, awaitedForEach, log, logColors} from '@augment-vir/common';
 import {confirm} from '@inquirer/prompts';
 import {type SimpleGit} from 'simple-git';
 import {getCommitAuthorName, type Commit} from './commit.js';
@@ -157,17 +157,17 @@ export async function pushDeploy(
             log.info(
                 `\n${requiresForcePush ? 'Only on' : 'Releasing from'} ${logColors.bold}${fromBranch}${logColors.reset}:`,
             );
-            commitsAhead.forEach((commit, index) => {
+            await awaitedForEach(commitsAhead, async (commit, index) => {
                 log.faint(
-                    `    ${index + 1}. ${commit.hash.slice(0, 7)} (${getCommitAuthorName(commit)}) - ${commit.message}`,
+                    `    ${index + 1}. ${commit.hash.slice(0, 7)} (${await getCommitAuthorName(commit)}) - ${commit.message}`,
                 );
             });
 
             if (requiresForcePush) {
                 log.info(`\nOnly on ${logColors.bold}${toBranch}${logColors.reset}:`);
-                commitsBehind.forEach((commit, index) => {
+                await awaitedForEach(commitsBehind, async (commit, index) => {
                     log.faint(
-                        `    ${index + 1}. ${commit.hash.slice(0, 7)} (${getCommitAuthorName(commit)}) - ${commit.message}`,
+                        `    ${index + 1}. ${commit.hash.slice(0, 7)} (${await getCommitAuthorName(commit)}) - ${commit.message}`,
                     );
                 });
             }
