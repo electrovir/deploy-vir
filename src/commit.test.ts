@@ -38,6 +38,29 @@ describe(getCommitAuthorName.name, () => {
         );
     });
 
+    it('skips agent co-authors that have no bot name suffix', async () => {
+        assert.strictEquals(
+            await getCommitAuthorName({
+                author_name: 'claude[bot]',
+                body: [
+                    'Co-authored-by: Claude <noreply@anthropic.com>',
+                    'Co-authored-by: electrovir <electrovir@users.noreply.github.com>',
+                ].join('\n'),
+            }),
+            'electrovir',
+        );
+    });
+
+    it('falls back to the bot name when the only co-author is an agent', async () => {
+        assert.strictEquals(
+            await getCommitAuthorName({
+                author_name: 'claude[bot]',
+                body: 'Co-authored-by: Claude Opus 5 <NOREPLY@Anthropic.com>\n',
+            }),
+            'claude[bot]',
+        );
+    });
+
     it('falls back to the bot name when there are no co-authors', async () => {
         assert.strictEquals(
             await getCommitAuthorName({

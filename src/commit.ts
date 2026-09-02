@@ -13,6 +13,16 @@ export type Commit = DefaultLogFields & ListLogLine;
 const coAuthorRegExp = /^co[- \t]*authored[- \t]*by:(.*)$/gim;
 const pullRequestNumberRegExp = /#(\d+)/;
 const botNameSuffix = '[bot]';
+/**
+ * AI agents write their own `Co-authored-by:` trailer with a person-like name that has no `[bot]`
+ * suffix (like `Claude <noreply@anthropic.com>`), so their email domain is the only reliable signal
+ * that the co-author isn't a human.
+ */
+const botEmailDomains = [
+    'anthropic.com',
+    'cursor.com',
+    'openai.com',
+];
 
 /**
  * Each `gh` lookup is a network request and each commit's author name gets read more than once (CLI
@@ -23,8 +33,9 @@ const pullRequestAssigneeCache = new Map<string, Promise<string | undefined>>();
 /**
  * Extract the human author name for a commit. Commits authored by a bot (a name with a `[bot]`
  * suffix, like GitHub's merge queue bot) are attributed to their first non-bot `Co-authored-by:`
- * trailer instead. If the commit has no such trailer, its pull request's first non-bot assignee is
- * used (requires the `gh` CLI). All fallbacks resolve to the original bot name.
+ * trailer instead. A co-author counts as a bot when its name has the `[bot]` suffix or its email is
+ * on a known agent domain. If the commit has no such trailer, its pull request's first non-bot
+ * assignee is used (requires the `gh` CLI). All fallbacks resolve to the original bot name.
  *
  * @category Internal
  */
@@ -39,11 +50,30 @@ export async function getCommitAuthorName(
     }
 
     const coAuthorName = Array.from(commit.body.matchAll(coAuthorRegExp))
-        /** Strip the trailing `<email>` from each trailer. */
-        .map((match) => (match[1] || '').split('<')[0]?.trim())
-        .find((name) => name && !name.endsWith(botNameSuffix));
+        .map((match) => parseCoAuthor(match[1] || ''))
+        .find((coAuthor) => coAuthor.name && !isBotCoAuthor(coAuthor))?.name;
 
     return coAuthorName || (await getPullRequestAssigneeName(commit)) || commit.author_name;
+}
+
+/** Split a `Co-authored-by:` trailer value into its name and its optional `<email>`. */
+function parseCoAuthor(trailerValue: string) {
+    const [
+        namePart,
+        emailPart,
+    ] = trailerValue.split('<');
+
+    return {
+        name: (namePart || '').trim(),
+        email: (emailPart || '').split('>')[0]?.trim().toLowerCase() || '',
+    };
+}
+
+function isBotCoAuthor({name, email}: Readonly<{name: string; email: string}>) {
+    return (
+        name.endsWith(botNameSuffix) ||
+        botEmailDomains.some((botEmailDomain) => email.endsWith(`@${botEmailDomain}`))
+    );
 }
 
 function getPullRequestAssigneeName(
