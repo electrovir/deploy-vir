@@ -31,11 +31,12 @@ const botEmailDomains = [
 const pullRequestAssigneeCache = new Map<string, Promise<string | undefined>>();
 
 /**
- * Extract the human author name for a commit. Commits authored by a bot (a name with a `[bot]`
- * suffix, like GitHub's merge queue bot) are attributed to their first non-bot `Co-authored-by:`
- * trailer instead. A co-author counts as a bot when its name has the `[bot]` suffix or its email is
- * on a known agent domain. If the commit has no such trailer, its pull request's first non-bot
- * assignee is used (requires the `gh` CLI). All fallbacks resolve to the original bot name.
+ * Extract the human author name for a commit. The first non-bot assignee on the commit's pull
+ * request wins, since whoever merged a pull request is often not whoever owns the change (requires
+ * the `gh` CLI). Failing that, commits authored by a bot (a name with a `[bot]` suffix, like
+ * GitHub's merge queue bot) are attributed to their first non-bot `Co-authored-by:` trailer. A
+ * co-author counts as a bot when its name has the `[bot]` suffix or its email is on a known agent
+ * domain. All fallbacks resolve to the commit's own author name.
  *
  * @category Internal
  */
@@ -45,7 +46,23 @@ export async function getCommitAuthorName(
             PartialWithUndefined<Pick<Commit, 'hash' | 'message'>>
     >,
 ): Promise<string> {
-    if (!commit.author_name.endsWith(botNameSuffix)) {
+    const isBotAuthor = commit.author_name.endsWith(botNameSuffix);
+    const pullRequestNumber = commit.message?.match(pullRequestNumberRegExp)?.[1];
+    /**
+     * Searching for a pull request by commit hash is much slower than reading one by number, so
+     * it's reserved for bot commits, where the commit's own author is never the right answer.
+     */
+    const assigneeName =
+        pullRequestNumber || isBotAuthor
+            ? await getPullRequestAssigneeName({
+                  pullRequestNumber,
+                  hash: commit.hash,
+              })
+            : undefined;
+
+    if (assigneeName) {
+        return assigneeName;
+    } else if (!isBotAuthor) {
         return commit.author_name;
     }
 
@@ -53,7 +70,7 @@ export async function getCommitAuthorName(
         .map((match) => parseCoAuthor(match[1] || ''))
         .find((coAuthor) => coAuthor.name && !isBotCoAuthor(coAuthor))?.name;
 
-    return coAuthorName || (await getPullRequestAssigneeName(commit)) || commit.author_name;
+    return coAuthorName || commit.author_name;
 }
 
 /** Split a `Co-authored-by:` trailer value into its name and its optional `<email>`. */
@@ -76,11 +93,16 @@ function isBotCoAuthor({name, email}: Readonly<{name: string; email: string}>) {
     );
 }
 
-function getPullRequestAssigneeName(
-    commit: Readonly<PartialWithUndefined<Pick<Commit, 'hash' | 'message'>>>,
-): Promise<string | undefined> {
-    const pullRequestNumber = commit.message?.match(pullRequestNumberRegExp)?.[1];
-    const cacheKey = pullRequestNumber || commit.hash;
+function getPullRequestAssigneeName({
+    pullRequestNumber,
+    hash,
+}: Readonly<
+    PartialWithUndefined<{
+        pullRequestNumber: string;
+        hash: string;
+    }>
+>): Promise<string | undefined> {
+    const cacheKey = pullRequestNumber || hash;
 
     if (!cacheKey) {
         return Promise.resolve(undefined);
