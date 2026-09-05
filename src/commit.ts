@@ -10,101 +10,98 @@ import {type DefaultLogFields, type ListLogLine} from 'simple-git';
  */
 export type Commit = DefaultLogFields & ListLogLine;
 
-const coAuthorRegExp = /^co[- \t]*authored[- \t]*by:(.*)$/gim;
 const pullRequestNumberRegExp = /#(\d+)/;
-const botNameSuffix = '[bot]';
 
 /**
  * Each `gh` lookup is a network request and each commit's author name gets read more than once (CLI
  * output and notifications), so results are cached by their lookup key.
  */
-const pullRequestAssigneeCache = new Map<string, Promise<string | undefined>>();
+const pullRequestAuthorCache = new Map<string, Promise<string | undefined>>();
 
 /**
- * Extract the human author name for a commit. Commits authored by a bot (a name with a `[bot]`
- * suffix, like GitHub's merge queue bot) are attributed to their first non-bot `Co-authored-by:`
- * trailer instead. If the commit has no such trailer, its pull request's first non-bot assignee is
- * used (requires the `gh` CLI). All fallbacks resolve to the original bot name.
+ * Extract the owning person's name for a commit: the first assignee on the commit's pull request,
+ * or that pull request's author (requires the `gh` CLI). Whoever merged a pull request is often not
+ * whoever owns the change, so the commit's own author is only used when no pull request can be
+ * read.
  *
  * @category Internal
  */
 export async function getCommitAuthorName(
     commit: Readonly<
-        Pick<Commit, 'author_name' | 'body'> &
-            PartialWithUndefined<Pick<Commit, 'hash' | 'message'>>
+        Pick<Commit, 'author_name'> & PartialWithUndefined<Pick<Commit, 'hash' | 'message'>>
     >,
 ): Promise<string> {
-    if (!commit.author_name.endsWith(botNameSuffix)) {
-        return commit.author_name;
-    }
+    const pullRequestAuthorName = await getPullRequestAuthorName({
+        pullRequestNumber: commit.message?.match(pullRequestNumberRegExp)?.[1],
+        hash: commit.hash,
+    });
 
-    const coAuthorName = Array.from(commit.body.matchAll(coAuthorRegExp))
-        /** Strip the trailing `<email>` from each trailer. */
-        .map((match) => (match[1] || '').split('<')[0]?.trim())
-        .find((name) => name && !name.endsWith(botNameSuffix));
-
-    return coAuthorName || (await getPullRequestAssigneeName(commit)) || commit.author_name;
+    return pullRequestAuthorName || commit.author_name;
 }
 
-function getPullRequestAssigneeName(
-    commit: Readonly<PartialWithUndefined<Pick<Commit, 'hash' | 'message'>>>,
-): Promise<string | undefined> {
-    const pullRequestNumber = commit.message?.match(pullRequestNumberRegExp)?.[1];
-    const cacheKey = pullRequestNumber || commit.hash;
+function getPullRequestAuthorName({
+    pullRequestNumber,
+    hash,
+}: Readonly<
+    PartialWithUndefined<{
+        pullRequestNumber: string;
+        hash: string;
+    }>
+>): Promise<string | undefined> {
+    const cacheKey = pullRequestNumber || hash;
 
     if (!cacheKey) {
         return Promise.resolve(undefined);
     }
 
-    const cached = pullRequestAssigneeCache.get(cacheKey);
+    const cached = pullRequestAuthorCache.get(cacheKey);
 
     if (cached) {
         return cached;
     }
 
-    const pending = fetchPullRequestAssigneeName(
+    const pending = fetchPullRequestAuthorName(
         pullRequestNumber
-            ? `gh pr view ${pullRequestNumber} --json assignees`
-            : `gh pr list --search ${cacheKey} --state merged --limit 1 --json assignees`,
+            ? `gh pr view ${pullRequestNumber} --json assignees,author`
+            : `gh pr list --search ${cacheKey} --state merged --limit 1 --json assignees,author`,
     );
-    pullRequestAssigneeCache.set(cacheKey, pending);
+    pullRequestAuthorCache.set(cacheKey, pending);
 
     return pending;
 }
 
-async function fetchPullRequestAssigneeName(command: string): Promise<string | undefined> {
+async function fetchPullRequestAuthorName(command: string): Promise<string | undefined> {
     try {
         const output = await runShellCommand(command, {
             rejectOnError: true,
         });
 
-        return extractAssigneeName(JSON.parse(output.stdout));
+        return extractPullRequestAuthorName(JSON.parse(output.stdout));
     } catch (error) {
-        log.faint(`Failed to read a pull request assignee: ${extractErrorMessage(error)}`);
+        log.faint(`Failed to read a pull request author: ${extractErrorMessage(error)}`);
         return undefined;
     }
 }
 
-function extractAssigneeName(parsedJson: unknown): string | undefined {
+function extractPullRequestAuthorName(parsedJson: unknown): string | undefined {
     /** `gh pr list` outputs an array, `gh pr view` outputs a single pull request. */
     const pullRequest = check.isArray(parsedJson) ? parsedJson[0] : parsedJson;
+    const assignees =
+        check.hasKey(pullRequest, 'assignees') && check.isArray(pullRequest.assignees)
+            ? pullRequest.assignees
+            : [];
 
-    if (!check.hasKey(pullRequest, 'assignees') || !check.isArray(pullRequest.assignees)) {
-        return undefined;
-    }
+    return [
+        ...assignees,
+        check.hasKey(pullRequest, 'author') ? pullRequest.author : undefined,
+    ]
+        .map(extractUserName)
+        .find((name) => name);
+}
 
-    return pullRequest.assignees
-        .map((assignee) => {
-            const name =
-                check.hasKey(assignee, 'name') && check.isString(assignee.name)
-                    ? assignee.name
-                    : '';
-            const login =
-                check.hasKey(assignee, 'login') && check.isString(assignee.login)
-                    ? assignee.login
-                    : '';
+function extractUserName(user: unknown): string | undefined {
+    const name = check.hasKey(user, 'name') && check.isString(user.name) ? user.name : '';
+    const login = check.hasKey(user, 'login') && check.isString(user.login) ? user.login : '';
 
-            return name || login;
-        })
-        .find((name) => name && !name.endsWith(botNameSuffix));
+    return name || login || undefined;
 }
