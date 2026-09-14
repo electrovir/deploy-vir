@@ -1,6 +1,6 @@
 {
     "name": "deploy-vir",
-    "version": "3.6.0",
+    "version": "3.6.1",
     "description": "Deploy a branch to another branch with notifications.",
     "keywords": [
         "deploy",
@@ -44,10 +44,10 @@
         "test:update": "npm run test update"
     },
     "dependencies": {
-        "@augment-vir/assert": "^32.2.4",
-        "@augment-vir/common": "^32.2.4",
-        "@augment-vir/node": "^32.2.4",
-        "@inquirer/prompts": "^8.7.0",
+        "@augment-vir/assert": "^32.3.0",
+        "@augment-vir/common": "^32.3.0",
+        "@augment-vir/node": "^32.3.0",
+        "@inquirer/prompts": "^8.7.2",
         "@slack/web-api": "^8.1.1",
         "cli-vir": "^1.0.5",
         "simple-git": "^3.36.0",
@@ -55,19 +55,19 @@
         "url-vir": "^2.2.2"
     },
     "devDependencies": {
-        "@augment-vir/test": "^32.2.4",
-        "@eslint/eslintrc": "^3.3.6",
+        "@augment-vir/test": "^32.3.0",
+        "@eslint/eslintrc": "^3.3.7",
         "@eslint/js": "^10.0.1",
         "@stylistic/eslint-plugin": "^5.10.0",
         "@stylistic/eslint-plugin-ts": "^4.4.1",
-        "@types/node": "^26.4.0",
-        "@typescript-eslint/eslint-plugin": "^8.68.0",
-        "cspell": "^10.1.1",
+        "@types/node": "^26.5.0",
+        "@typescript-eslint/eslint-plugin": "^8.70.0",
+        "cspell": "^10.3.0",
         "dependency-cruiser": "^18.2.0",
         "esbuild": "^0.28.2",
-        "eslint": "^10.9.1",
+        "eslint": "^10.10.0",
         "eslint-config-prettier": "^10.1.8",
-        "eslint-plugin-jsdoc": "^64.3.2",
+        "eslint-plugin-jsdoc": "^64.3.8",
         "eslint-plugin-monorepo-cop": "^1.0.2",
         "eslint-plugin-playwright": "^2.11.0",
         "eslint-plugin-prettier": "^5.5.6",
@@ -85,11 +85,11 @@
         "prettier-plugin-packagejson": "^3.0.2",
         "prettier-plugin-sort-json": "^4.2.0",
         "prettier-plugin-toml": "^2.0.6",
-        "runstorm": "^1.0.6",
+        "runstorm": "^1.1.0",
         "typedoc": "^0.28.20",
         "typescript": "^6.0.3",
-        "typescript-eslint": "^8.68.0",
-        "virmator": "^14.33.0"
+        "typescript-eslint": "^8.70.0",
+        "virmator": "^14.36.2"
     },
     "engines": {
         "node": ">=22"
