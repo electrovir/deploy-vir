@@ -26,14 +26,19 @@ const pullRequestAuthorCache = new Map<string, Promise<string | undefined>>();
  *
  * @category Internal
  */
-export async function getCommitAuthorName(
+export async function getCommitAuthorName({
+    commit,
+    gitUrl,
+}: Readonly<{
     commit: Readonly<
         Pick<Commit, 'author_name'> & PartialWithUndefined<Pick<Commit, 'hash' | 'message'>>
-    >,
-): Promise<string> {
+    >;
+    gitUrl: string;
+}>): Promise<string> {
     const pullRequestAuthorName = await getPullRequestAuthorName({
         pullRequestNumber: commit.message?.match(pullRequestNumberRegExp)?.[1],
         hash: commit.hash,
+        gitUrl,
     });
 
     return pullRequestAuthorName || commit.author_name;
@@ -42,17 +47,26 @@ export async function getCommitAuthorName(
 function getPullRequestAuthorName({
     pullRequestNumber,
     hash,
+    gitUrl,
 }: Readonly<
-    PartialWithUndefined<{
+    {
+        gitUrl: string;
+    } & PartialWithUndefined<{
         pullRequestNumber: string;
         hash: string;
     }>
 >): Promise<string | undefined> {
-    const cacheKey = pullRequestNumber || hash;
+    const pullRequestKey = pullRequestNumber || hash;
 
-    if (!cacheKey) {
+    if (!pullRequestKey) {
         return Promise.resolve(undefined);
     }
+
+    /** Each repo gets its own cache entry because pull request numbers repeat across repos. */
+    const cacheKey = [
+        gitUrl,
+        pullRequestKey,
+    ].join(' ');
 
     const cached = pullRequestAuthorCache.get(cacheKey);
 
@@ -61,13 +75,44 @@ function getPullRequestAuthorName({
     }
 
     const pending = fetchPullRequestAuthorName(
-        pullRequestNumber
-            ? `gh pr view ${pullRequestNumber} --json assignees,author`
-            : `gh pr list --search ${cacheKey} --state merged --limit 1 --json assignees,author`,
+        buildPullRequestAuthorCommand({
+            gitUrl,
+            hash,
+            pullRequestNumber,
+        }),
     );
     pullRequestAuthorCache.set(cacheKey, pending);
 
     return pending;
+}
+
+/**
+ * Build the `gh` command that reads a pull request's assignees and author.
+ *
+ * `gh` picks its repo from the current directory's git remotes, which is not necessarily the repo
+ * being deployed, so the repo is always pinned with `--repo`. Without that, a pull request number
+ * from the deployed repo silently resolves to whatever unrelated pull request shares that number in
+ * the current directory's repo.
+ *
+ * @category Internal
+ */
+export function buildPullRequestAuthorCommand({
+    pullRequestNumber,
+    hash,
+    gitUrl,
+}: Readonly<
+    {
+        gitUrl: string;
+    } & PartialWithUndefined<{
+        pullRequestNumber: string;
+        hash: string;
+    }>
+>): string {
+    const repoFlag = `--repo '${gitUrl}'`;
+
+    return pullRequestNumber
+        ? `gh pr view ${pullRequestNumber} ${repoFlag} --json assignees,author`
+        : `gh pr list --search ${hash} ${repoFlag} --state merged --limit 1 --json assignees,author`;
 }
 
 async function fetchPullRequestAuthorName(command: string): Promise<string | undefined> {

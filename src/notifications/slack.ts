@@ -15,8 +15,19 @@ function truncateString(value: string, truncateAt = 100): string {
     }
 }
 
-async function formatCommit(baseCommitUrl: string | undefined, commit: Readonly<Commit>) {
-    const authorName = await getCommitAuthorName(commit);
+async function formatCommit({
+    baseCommitUrl,
+    commit,
+    gitUrl,
+}: Readonly<{
+    baseCommitUrl: string | undefined;
+    commit: Readonly<Commit>;
+    gitUrl: string;
+}>) {
+    const authorName = await getCommitAuthorName({
+        commit,
+        gitUrl,
+    });
 
     if (baseCommitUrl) {
         return `<${joinUrlPaths(baseCommitUrl, commit.hash)}|${commit.hash.slice(0, 7)}> (${authorName}) ${truncateString(commit.message)}`;
@@ -68,12 +79,22 @@ export async function sendNotificationToSlack({
     repoConfig,
 }: Readonly<NotificationParams>) {
     const deployedCommitBullets = await Promise.all(
-        deployedCommits.map(async (commit) => await formatCommit(repoConfig.commitBaseUrl, commit)),
+        deployedCommits.map(async (commit) => {
+            return await formatCommit({
+                baseCommitUrl: repoConfig.commitBaseUrl,
+                commit,
+                gitUrl: repoConfig.gitUrl,
+            });
+        }),
     );
     const overwrittenCommitBullets = await Promise.all(
-        overwrittenCommits.map(
-            async (commit) => await formatCommit(repoConfig.commitBaseUrl, commit),
-        ),
+        overwrittenCommits.map(async (commit) => {
+            return await formatCommit({
+                baseCommitUrl: repoConfig.commitBaseUrl,
+                commit,
+                gitUrl: repoConfig.gitUrl,
+            });
+        }),
     );
 
     const deployedCommitBulletLines = deployedCommitBullets.map((bullet) => `- ${bullet}`);

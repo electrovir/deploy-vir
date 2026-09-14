@@ -158,7 +158,10 @@ export async function pushDeploy(
             );
             await awaitedForEach(commitsAhead, async (commit, index) => {
                 log.faint(
-                    `    ${index + 1}. ${commit.hash.slice(0, 7)} (${await getCommitAuthorName(commit)}) - ${commit.message}`,
+                    `    ${index + 1}. ${commit.hash.slice(0, 7)} (${await getCommitAuthorName({
+                        commit,
+                        gitUrl: repoConfig.gitUrl,
+                    })}) - ${commit.message}`,
                 );
             });
 
@@ -166,7 +169,10 @@ export async function pushDeploy(
                 log.info(`\nOnly on ${logColors.bold}${toBranch}${logColors.reset}:`);
                 await awaitedForEach(commitsBehind, async (commit, index) => {
                     log.faint(
-                        `    ${index + 1}. ${commit.hash.slice(0, 7)} (${await getCommitAuthorName(commit)}) - ${commit.message}`,
+                        `    ${index + 1}. ${commit.hash.slice(0, 7)} (${await getCommitAuthorName({
+                            commit,
+                            gitUrl: repoConfig.gitUrl,
+                        })}) - ${commit.message}`,
                     );
                 });
             }
