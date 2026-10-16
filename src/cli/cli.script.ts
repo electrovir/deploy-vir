@@ -1,4 +1,5 @@
 import {FlagRequirement, parseArgs} from 'cli-vir';
+import {join} from 'node:path';
 import {runDeployVirCli} from './cli.js';
 
 await runDeployVirCli(
@@ -19,6 +20,7 @@ await runDeployVirCli(
         },
         {
             binName: 'deploy-vir',
+            packageJsonPath: join(import.meta.dirname, '..', '..', 'package.json'),
             importMeta: import.meta,
         },
     ),
