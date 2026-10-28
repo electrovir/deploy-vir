@@ -57,9 +57,12 @@ export type PostAcceptHookParams = {
  * @category Config
  */
 export type PostAcceptHookResult = PartialWithUndefined<{
-    /** Inserted into the notification immediately after the "<X> Pushed" header line. */
+    /**
+     * Inserted into the notification immediately after the "<X> Pushed" header line as standard
+     * markdown.
+     */
     prependToNotification: string;
-    /** Appended to the very end of the notification message. */
+    /** Appended to the very end of the notification message as standard markdown. */
     appendToNotification: string;
 }>;
 

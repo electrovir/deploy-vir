@@ -36,7 +36,8 @@ async function formatCommit({
     }
 }
 
-const slackMaxSectionLength = 2500;
+/** Slack rejects a markdown block over 12,000 characters. */
+const slackMaxMarkdownLength = 11_000;
 
 function pushAndGet<T>(array: T[], item: T) {
     array.push(item);
@@ -50,7 +51,7 @@ function chunkSectionLines(lines: ReadonlyArray<string>): string[][] {
         const latestSection = sectionLines.slice(-1)[0];
 
         const currentSection =
-            latestSection && latestSection.length + line.length < slackMaxSectionLength
+            latestSection && latestSection.length + line.length < slackMaxMarkdownLength
                 ? latestSection
                 : pushAndGet(sectionLines, {
                       length: 0,
@@ -112,20 +113,14 @@ export async function sendNotificationToSlack({
 
     const blocks: KnownBlock[] = [
         {
-            type: 'section',
-            text: {
-                type: 'mrkdwn',
-                text: `*${setFirstLetterCasing(repoConfig.name, StringCase.Upper)} ${setFirstLetterCasing(toBranchName, StringCase.Upper)}* Pushed`,
-            },
+            type: 'markdown',
+            text: `**${setFirstLetterCasing(repoConfig.name, StringCase.Upper)} ${setFirstLetterCasing(toBranchName, StringCase.Upper)}** Pushed`,
         },
         ...(hookResult?.prependToNotification
             ? ([
                   {
-                      type: 'section',
-                      text: {
-                          type: 'mrkdwn',
-                          text: hookResult.prependToNotification,
-                      },
+                      type: 'markdown',
+                      text: hookResult.prependToNotification,
                   },
               ] satisfies KnownBlock[])
             : []),
@@ -139,38 +134,26 @@ export async function sendNotificationToSlack({
             ],
         },
         {
-            type: 'section',
-            text: {
-                type: 'mrkdwn',
-                text: '\n*Deployed Commits*\n',
-            },
+            type: 'markdown',
+            text: '**Deployed Commits**',
         },
         ...chunkSectionLines(deployedCommitBulletLines).map((lines): KnownBlock => {
             return {
-                type: 'section',
-                text: {
-                    type: 'mrkdwn',
-                    text: lines.join('\n'),
-                },
+                type: 'markdown',
+                text: lines.join('\n'),
             };
         }),
         ...(overwrittenCommitBulletLines?.length
             ? ([
                   {
-                      type: 'section',
-                      text: {
-                          type: 'mrkdwn',
-                          text: '\n*Overwritten Commits*\n',
-                      },
+                      type: 'markdown',
+                      text: '**Overwritten Commits**',
                   },
 
                   ...chunkSectionLines(overwrittenCommitBulletLines).map((lines): KnownBlock => {
                       return {
-                          type: 'section',
-                          text: {
-                              type: 'mrkdwn',
-                              text: lines.join('\n'),
-                          },
+                          type: 'markdown',
+                          text: lines.join('\n'),
                       };
                   }),
               ] satisfies KnownBlock[])
@@ -178,11 +161,8 @@ export async function sendNotificationToSlack({
         ...(hookResult?.appendToNotification
             ? ([
                   {
-                      type: 'section',
-                      text: {
-                          type: 'mrkdwn',
-                          text: hookResult.appendToNotification,
-                      },
+                      type: 'markdown',
+                      text: hookResult.appendToNotification,
                   },
               ] satisfies KnownBlock[])
             : []),
